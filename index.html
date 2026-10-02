@@ -4,74 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AMS — Attendance Management System</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='6' fill='%230f2942'/><text x='24' y='32' font-family='Arial, sans-serif' font-size='18' font-weight='bold' fill='%23ffffff' text-anchor='middle'>AMS</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='6' fill='%230f2942'/><text x='24' y='31' font-family='Arial,sans-serif' font-size='16' font-weight='bold' fill='%23ffffff' text-anchor='middle'>AMS</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- ========================================================
-       SCREEN 1: CLEAN CORPORATE LANDING PORTAL
+       SCREEN 1: CLEAN SIGN-IN SCREEN WITH "BY NKK"
        ======================================================== -->
-  <div id="landingScreen" class="portal-landing-wrapper">
-    <header class="portal-nav">
-      <div class="nav-brand">
-        <span class="brand-badge">AMS</span>
-        <span class="brand-sub">Attendance Management System</span>
-      </div>
-      <div class="nav-clock" id="liveClockBadge">
-        <span class="clock-dot"></span>
-        <span id="liveClockText">Synchronizing Clock...</span>
-      </div>
-    </header>
-
-    <main class="portal-center-box">
-      <div class="portal-card">
-        <div class="portal-seal">TRAINING ATTENDANCE PORTAL</div>
-        <h1>AMS Portal Access</h1>
-        <p class="portal-desc">Centralized attendance register, batch management, and trainee reporting system.</p>
-
-        <div class="portal-status-strip">
-          <div class="status-col">
-            <span class="label">System Status</span>
-            <span class="value text-success">Active & Online</span>
-          </div>
-          <div class="status-col">
-            <span class="label">Access</span>
-            <span class="value">Instructor / Admin</span>
-          </div>
-          <div class="status-col">
-            <span class="label">Time Standard</span>
-            <span class="value">IST (UTC +5:30)</span>
-          </div>
-        </div>
-
-        <div class="portal-cta-group">
-          <button type="button" id="landingContinueBtn" class="btn-primary-lg" style="display: none;">
-            Continue to Workspace →
-          </button>
-          <button type="button" id="landingLoginBtn" class="btn-primary-lg">
-            Sign In to Portal
-          </button>
-        </div>
-      </div>
-    </main>
-
-    <footer class="portal-bottom-bar">
-      <span>Enterprise Training Operations • All Session Records Logged</span>
-    </footer>
-  </div>
-
-  <!-- ========================================================
-       SCREEN 2: LOGIN SCREEN
-       ======================================================== -->
-  <div id="loginScreen" class="login-wrapper" style="display: none;">
+  <div id="loginScreen" class="login-wrapper">
     <div class="login-box">
-      <button type="button" class="btn-back" id="backToLandingFromLogin">← Back to Portal</button>
-      
       <div class="login-header">
         <span class="brand-badge">AMS</span>
         <h2>Sign In</h2>
-        <p>Enter your Employee ID and password to proceed.</p>
+        <p class="subtitle">Attendance Management System</p>
+        <div class="clock-badge" id="liveClockBadge">
+          <span class="clock-dot"></span>
+          <span id="liveClockText">Synchronizing Clock...</span>
+        </div>
+      </div>
+
+      <div id="activeSessionBlock" class="session-block" style="display: none;">
+        <p class="session-notice">An active session was detected.</p>
+        <button type="button" id="landingContinueBtn" class="btn-primary full-width">
+          Continue to Workspace →
+        </button>
+        <div class="divider"><span>or sign in with another account</span></div>
       </div>
 
       <form id="loginForm">
@@ -97,14 +55,16 @@
           >
         </div>
 
-        <button type="submit" id="loginButton" class="btn-submit">Sign In</button>
+        <button type="submit" id="loginButton" class="btn-primary full-width">Sign In</button>
         <p id="loginMessage" class="form-message" aria-live="polite"></p>
       </form>
+
+      <div class="by-nkk-tag">By NKK</div>
     </div>
   </div>
 
   <!-- ========================================================
-       SCREEN 3: BATCH SELECTION HUB
+       SCREEN 2: BATCH SELECTION HUB
        ======================================================== -->
   <div id="batchHubScreen" class="hub-wrapper" style="display: none;">
     <header class="app-header">
@@ -120,7 +80,7 @@
           <span class="indicator-dot"></span>
           <span id="hubLoggedInUser">User</span>
         </div>
-        <button type="button" class="btn-logout" onclick="logout()">Log Out</button>
+        <button type="button" class="btn-outline-header" onclick="logout()">Log Out</button>
       </div>
     </header>
 
@@ -131,7 +91,7 @@
           <p id="hubSubtitle">Select your allocated batch to manage daily attendance and student records.</p>
         </div>
         <div id="adminBatchControls" style="display: none;">
-          <button type="button" id="createBatchBtn" class="btn-action-primary">+ Add New Batch</button>
+          <button type="button" id="createBatchBtn" class="btn-primary">+ Add New Batch</button>
         </div>
       </div>
 
@@ -140,7 +100,7 @@
   </div>
 
   <!-- ========================================================
-       SCREEN 4: MAIN WORKSPACE (WITHIN ACTIVE BATCH)
+       SCREEN 3: WORKSPACE (INSIDE SELECTED BATCH)
        ======================================================== -->
   <div id="appScreen" class="app-wrapper" style="display: none;">
     <header class="app-header">
@@ -148,17 +108,17 @@
         <span class="brand-badge">AMS</span>
         <div>
           <h1 id="workspaceBatchTitle">Batch Attendance Workspace</h1>
-          <p>Official Attendance Management System</p>
+          <p>Training Batch Attendance</p>
         </div>
       </div>
 
       <div class="header-right">
-        <button type="button" id="switchBatchBtn" class="btn-switch-batch">⇄ Switch Batch</button>
+        <button type="button" id="switchBatchBtn" class="btn-outline-header">⇄ Switch Batch</button>
         <div class="user-pill">
           <span class="indicator-dot"></span>
           <span id="loggedInUser">User</span>
         </div>
-        <button type="button" class="btn-logout" onclick="logout()">Log Out</button>
+        <button type="button" class="btn-outline-header" onclick="logout()">Log Out</button>
       </div>
     </header>
 
@@ -186,7 +146,7 @@
         <div class="section-title-strip">
           <div>
             <h2>Daily Attendance Record</h2>
-            <p>Pick date parameters or click Today to mark Present or Absent.</p>
+            <p>Pick a date or click Today's Date to mark attendance.</p>
           </div>
         </div>
 
@@ -263,7 +223,7 @@
         </div>
 
         <div class="action-footer">
-          <button type="button" id="saveAttendanceButton" class="btn-save">
+          <button type="button" id="saveAttendanceButton" class="btn-primary">
             Save Attendance Records
           </button>
           <span id="dailySaveMessage" class="form-message" aria-live="polite"></span>
@@ -275,9 +235,9 @@
         <div class="section-title-strip">
           <div>
             <h2>Attendance Register</h2>
-            <p>Export attendance grids formatted with dates (DD-MM-YYYY) and exact Present/Absent statuses.</p>
+            <p>Export attendance grids formatted with dates (DD-MM-YYYY) and exact Present/Absent values.</p>
           </div>
-          <button type="button" id="copyMonthlyButton" class="btn-action-primary">
+          <button type="button" id="copyMonthlyButton" class="btn-primary">
             Copy for Excel
           </button>
         </div>
@@ -329,7 +289,7 @@
             <h2>Students</h2>
             <p>Manage students registered in this batch.</p>
           </div>
-          <button type="button" id="addStudentButton" class="btn-action-primary">
+          <button type="button" id="addStudentButton" class="btn-primary">
             + Add Student
           </button>
         </div>
@@ -355,7 +315,7 @@
         <div class="section-title-strip">
           <div>
             <h2>Individual Student Report</h2>
-            <p>Individual performance log and monthly attendance percentage.</p>
+            <p>Monthly attendance percentages and detailed logs.</p>
           </div>
         </div>
 
@@ -402,7 +362,7 @@
             <h2>Teachers & Admins</h2>
             <p>Manage staff accounts, change passwords, and allocate permitted batches.</p>
           </div>
-          <button type="button" id="addUserButton" class="btn-action-primary">
+          <button type="button" id="addUserButton" class="btn-primary">
             + Add Teacher / Admin
           </button>
         </div>
@@ -443,8 +403,8 @@
           <input type="text" id="newBatchName" placeholder="e.g. Batch 01 or 2026 Trainees" required>
         </div>
         <div class="modal-btn-row">
-          <button type="button" id="cancelBatchButton" class="btn-cancel">Cancel</button>
-          <button type="submit" class="btn-submit-action">Save Batch</button>
+          <button type="button" id="cancelBatchButton" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save Batch</button>
         </div>
         <p id="batchFormMessage" class="form-message" aria-live="polite"></p>
       </form>
@@ -463,8 +423,8 @@
         <input type="hidden" id="allocateProfileId">
         <div id="allocateBatchCheckboxes" class="checkbox-container"></div>
         <div class="modal-btn-row">
-          <button type="button" id="cancelAllocateButton" class="btn-cancel">Cancel</button>
-          <button type="submit" id="saveAllocateButton" class="btn-submit-action">Save Allocation</button>
+          <button type="button" id="cancelAllocateButton" class="btn-secondary">Cancel</button>
+          <button type="submit" id="saveAllocateButton" class="btn-primary">Save Allocation</button>
         </div>
         <p id="allocateFormMessage" class="form-message" aria-live="polite"></p>
       </form>
@@ -485,8 +445,8 @@
           <input type="password" id="newStaffPassword" placeholder="Minimum 6 characters" required>
         </div>
         <div class="modal-btn-row">
-          <button type="button" id="cancelPasswordButton" class="btn-cancel">Cancel</button>
-          <button type="submit" id="savePasswordButton" class="btn-submit-action">Update Password</button>
+          <button type="button" id="cancelPasswordButton" class="btn-secondary">Cancel</button>
+          <button type="submit" id="savePasswordButton" class="btn-primary">Update Password</button>
         </div>
         <p id="passwordFormMessage" class="form-message" aria-live="polite"></p>
       </form>
@@ -511,8 +471,8 @@
           <input type="text" id="studentName" required placeholder="Full Name">
         </div>
         <div class="modal-btn-row">
-          <button type="button" id="cancelStudentButton" class="btn-cancel">Cancel</button>
-          <button type="submit" class="btn-submit-action">Save Student</button>
+          <button type="button" id="cancelStudentButton" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save Student</button>
         </div>
         <p id="studentFormMessage" class="form-message" aria-live="polite"></p>
       </form>
@@ -523,7 +483,7 @@
   <div id="userModal" class="modal-backdrop" style="display: none;">
     <div class="modal-dialog">
       <div class="modal-top">
-        <h2>Add Teacher / Admin</h2>
+        <h3>Add Teacher / Admin</h3>
         <button type="button" id="closeUserModal" class="btn-close-modal">&times;</button>
       </div>
       <form id="userForm">
@@ -547,8 +507,8 @@
           <input type="password" id="userPassword" placeholder="Minimum 6 characters" required>
         </div>
         <div class="modal-btn-row">
-          <button type="button" id="cancelUserButton" class="btn-cancel">Cancel</button>
-          <button type="submit" id="saveUserButton" class="btn-submit-action">Create Account</button>
+          <button type="button" id="cancelUserButton" class="btn-secondary">Cancel</button>
+          <button type="submit" id="saveUserButton" class="btn-primary">Create Account</button>
         </div>
         <p id="userFormMessage" class="form-message" aria-live="polite"></p>
       </form>

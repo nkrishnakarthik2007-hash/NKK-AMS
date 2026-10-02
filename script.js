@@ -98,7 +98,7 @@ function initLiveClock() {
     });
     const badge = $("liveClockText");
     if (badge) {
-      badge.textContent = `${dateFormatted} | ${timeFormatted} IST`;
+      badge.textContent = `${dateFormatted} • ${timeFormatted} (IST)`;
     }
   }
   updateTime();
@@ -257,43 +257,31 @@ async function enterApp() {
   } catch (err) {
     console.error("Startup error:", err);
     await sb.auth.signOut();
-    showLandingScreen();
+    showLoginScreen();
     showMessage("loginMessage", getReadableError(err), "error");
     $("loginButton").disabled = false;
     $("loginButton").textContent = "Sign In";
   }
 }
 
-// ------------------------------------------------------------
-// SCREEN TRANSITIONS
-// ------------------------------------------------------------
-function showLandingScreen() {
-  $("landingScreen").style.display = "flex";
-  $("loginScreen").style.display = "none";
-  $("batchHubScreen").style.display = "none";
-  $("appScreen").style.display = "none";
-}
-
 function showLoginScreen() {
-  $("landingScreen").style.display = "none";
   $("loginScreen").style.display = "flex";
   $("batchHubScreen").style.display = "none";
   $("appScreen").style.display = "none";
-  $("loginEmployeeId").focus();
+  checkActiveSession();
 }
 
-async function checkLandingSession() {
+async function checkActiveSession() {
   try {
     const { data: { session } } = await sb.auth.getSession();
+    const block = $("activeSessionBlock");
     if (session && session.user) {
-      $("landingContinueBtn").style.display = "inline-flex";
-      $("landingLoginBtn").textContent = "Switch Account";
+      block.style.display = "block";
     } else {
-      $("landingContinueBtn").style.display = "none";
-      $("landingLoginBtn").textContent = "Sign In to Portal";
+      block.style.display = "none";
     }
   } catch (e) {
-    $("landingContinueBtn").style.display = "none";
+    $("activeSessionBlock").style.display = "none";
   }
 }
 
@@ -301,7 +289,6 @@ async function checkLandingSession() {
 // BATCH HUB & PERMISSIONS
 // ------------------------------------------------------------
 async function openBatchHub() {
-  $("landingScreen").style.display = "none";
   $("loginScreen").style.display = "none";
   $("appScreen").style.display = "none";
   $("batchHubScreen").style.display = "block";
@@ -1278,8 +1265,7 @@ async function logout() {
     currentUser = null;
     currentProfile = null;
     currentBatch = null;
-    showLandingScreen();
-    checkLandingSession();
+    showLoginScreen();
     $("loginForm").reset();
     clearMessage("loginMessage");
     $("loginButton").disabled = false;
@@ -1293,12 +1279,10 @@ async function logout() {
 document.addEventListener("DOMContentLoaded", async () => {
   initLiveClock();
 
-  // Landing CTAs
-  $("landingLoginBtn").addEventListener("click", showLoginScreen);
+  // Continue to workspace button
   $("landingContinueBtn").addEventListener("click", async () => {
     await enterApp();
   });
-  $("backToLandingFromLogin").addEventListener("click", showLandingScreen);
 
   // Login Form
   $("loginForm").addEventListener("submit", e => {
@@ -1463,5 +1447,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === $("userModal")) closeUserModal();
   });
 
-  await checkLandingSession();
+  showLoginScreen();
 });
