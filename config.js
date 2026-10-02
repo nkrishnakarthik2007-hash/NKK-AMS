@@ -13,6 +13,6 @@
 // - database password
 // ============================================================
 
-const SUPABASE_URL = "https://dggokugqqeddfydcjvpb.supabase.co";
+const SUPABASE_URL = "hhttps://dggokugqqeddfydcjvpb.supabase.co/functions/v1/admin-users";
 
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Qpr9qKeEfxvdYCwHIospmg_sxXLqKJR";
