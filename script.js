@@ -1,6 +1,6 @@
 // ============================================================
-// AMS — THE ONE AND ONLY ATTENDANCE MANAGEMENT SYSTEM
-// CONTROLLER: LANDING HERO, ORBITS, CLOCK, BATCHES & USERS
+// AMS — ATTENDANCE MANAGEMENT SYSTEM
+// CONTROLLER (PORTAL, BATCHES, ATTENDANCE, EXCEL, USERS)
 // ============================================================
 
 const EMAIL_DOMAIN = "attendance.example.com";
@@ -24,7 +24,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   }
 });
 
-// State
+// State Variables
 let currentUser = null;
 let currentProfile = null;
 let allBatches = [];
@@ -43,14 +43,14 @@ function showMessage(elementId, message, type = "") {
   const el = $(elementId);
   if (!el) return;
   el.textContent = message;
-  el.className = "message " + type;
+  el.className = "form-message " + type;
 }
 
 function clearMessage(elementId) {
   const el = $(elementId);
   if (!el) return;
   el.textContent = "";
-  el.className = "message";
+  el.className = "form-message";
 }
 
 function formatDateDisplay(dateStr) {
@@ -74,12 +74,12 @@ function getReadableError(error) {
   const msg = error.message || error.error_description || String(error);
   if (msg.includes("Invalid login credentials")) return "Invalid Employee ID / Email or password.";
   if (msg.includes("No API key found")) return "Supabase publishable key is missing in config.js.";
-  if (msg.includes("Failed to fetch")) return "Network error connecting to Supabase.";
+  if (msg.includes("Failed to fetch")) return "Network connection error.";
   return msg;
 }
 
 // ------------------------------------------------------------
-// INTERNET / LOCAL TIME CLOCK & DATE
+// CLOCK
 // ------------------------------------------------------------
 function initLiveClock() {
   function updateTime() {
@@ -98,88 +98,11 @@ function initLiveClock() {
     });
     const badge = $("liveClockText");
     if (badge) {
-      badge.textContent = `${dateFormatted} • ${timeFormatted} (IST)`;
+      badge.textContent = `${dateFormatted} | ${timeFormatted} IST`;
     }
   }
   updateTime();
   setInterval(updateTime, 1000);
-}
-
-// ------------------------------------------------------------
-// CELESTIAL ORBIT CANVAS ANIMATION
-// ------------------------------------------------------------
-function initCelestialCanvas() {
-  const canvas = $("orbitCanvas");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-
-  let w = (canvas.width = window.innerWidth);
-  let h = (canvas.height = window.innerHeight);
-
-  window.addEventListener("resize", () => {
-    w = canvas.width = window.innerWidth;
-    h = canvas.height = window.innerHeight;
-  });
-
-  const stars = Array.from({ length: 90 }, () => ({
-    x: Math.random() * w,
-    y: Math.random() * h,
-    radius: Math.random() * 1.4 + 0.3,
-    alpha: Math.random() * 0.7 + 0.2,
-    speed: Math.random() * 0.008 + 0.003
-  }));
-
-  const rings = [
-    { radiusX: 240, radiusY: 110, tilt: -0.22, speed: 0.009, angle: 0, planetRadius: 4.5, color: "#38bdf8" },
-    { radiusX: 370, radiusY: 170, tilt: -0.22, speed: 0.006, angle: 2.1, planetRadius: 6, color: "#60a5fa" },
-    { radiusX: 520, radiusY: 230, tilt: -0.22, speed: 0.0035, angle: 4.3, planetRadius: 5.5, color: "#a78bfa" }
-  ];
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-
-    // Subtle twinkling stars
-    stars.forEach(s => {
-      s.alpha += Math.sin(Date.now() * s.speed) * 0.015;
-      ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, Math.min(0.9, s.alpha))})`;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    const centerX = w / 2;
-    const centerY = h * 0.44;
-
-    rings.forEach(ring => {
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate(ring.tilt);
-
-      // Orbital ellipse track
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, ring.radiusX, ring.radiusY, 0, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Orbiting node/planet
-      ring.angle += ring.speed;
-      const px = Math.cos(ring.angle) * ring.radiusX;
-      const py = Math.sin(ring.angle) * ring.radiusY;
-
-      ctx.fillStyle = ring.color;
-      ctx.shadowColor = ring.color;
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(px, py, ring.planetRadius, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-    });
-
-    requestAnimationFrame(draw);
-  }
-  requestAnimationFrame(draw);
 }
 
 // ------------------------------------------------------------
@@ -247,7 +170,7 @@ async function login(credentialInput, password) {
   clearMessage("loginMessage");
   const input = credentialInput.trim();
   if (!input || !password) {
-    showMessage("loginMessage", "Enter Employee ID/Email and password.", "error");
+    showMessage("loginMessage", "Enter Employee ID and password.", "error");
     return;
   }
 
@@ -375,7 +298,7 @@ async function checkLandingSession() {
 }
 
 // ------------------------------------------------------------
-// BATCH HUB & ALLOCATION
+// BATCH HUB & PERMISSIONS
 // ------------------------------------------------------------
 async function openBatchHub() {
   $("landingScreen").style.display = "none";
@@ -388,7 +311,7 @@ async function openBatchHub() {
 
   if (currentProfile.role === "ADMIN") {
     permittedBatches = allBatches;
-    $("hubSubtitle").textContent = "Admin Portal: Select any batch to record attendance, manage rosters, or allocate batches to staff.";
+    $("hubSubtitle").textContent = "Administrative Directory: Manage batch workspaces and staff allocations.";
   } else {
     const { data: allocData } = await sb
       .from("teacher_batches")
@@ -397,7 +320,7 @@ async function openBatchHub() {
 
     const allowedIds = new Set((allocData || []).map(a => a.batch_id));
     permittedBatches = allBatches.filter(b => allowedIds.has(b.id));
-    $("hubSubtitle").textContent = "Teacher Workspace: Select your allocated batch to mark and manage daily attendance.";
+    $("hubSubtitle").textContent = "Instructor Directory: Access assigned batches to record daily attendance.";
   }
 
   renderBatchesGrid();
@@ -410,9 +333,9 @@ function renderBatchesGrid() {
 
   if (permittedBatches.length === 0) {
     grid.innerHTML = `
-      <div class="empty-hub-card">
-        <h3>No Batches Allocated</h3>
-        <p>You have not been assigned to any training batches yet. Please contact the administrator.</p>
+      <div class="empty-hub-box">
+        <h3>No Batches Assigned</h3>
+        <p>You have not been assigned to any training batches yet. Please contact an administrator.</p>
       </div>
     `;
     return;
@@ -422,20 +345,20 @@ function renderBatchesGrid() {
 
   permittedBatches.forEach(b => {
     const card = document.createElement("div");
-    card.className = "batch-card";
+    card.className = "batch-item-card";
     card.innerHTML = `
-      <div class="batch-card-top">
-        <span class="batch-icon">📚</span>
+      <div class="batch-top-row">
+        <span class="batch-badge">BATCH</span>
         ${isSuperAdmin ? `
-          <div class="batch-card-actions">
-            <button type="button" class="batch-action-btn edit-batch-btn" title="Rename Batch" data-id="${b.id}" data-name="${escapeHtml(b.name)}">✎</button>
-            <button type="button" class="batch-action-btn batch-delete-btn" title="Delete Batch" data-id="${b.id}" data-name="${escapeHtml(b.name)}">🗑</button>
+          <div class="batch-admin-actions">
+            <button type="button" class="btn-micro edit-batch-btn" data-id="${b.id}" data-name="${escapeHtml(b.name)}">Edit</button>
+            <button type="button" class="btn-micro text-danger batch-delete-btn" data-id="${b.id}" data-name="${escapeHtml(b.name)}">Delete</button>
           </div>
         ` : ""}
       </div>
-      <h3 class="batch-name">${escapeHtml(b.name)}</h3>
-      <p class="batch-sub">Training Batch Workspace</p>
-      <button type="button" class="enter-batch-btn" data-id="${b.id}">Open Batch →</button>
+      <h3 class="batch-title">${escapeHtml(b.name)}</h3>
+      <p class="batch-caption">Trainee Attendance Workspace</p>
+      <button type="button" class="btn-open-batch" data-id="${b.id}">Open Workspace →</button>
     `;
     grid.appendChild(card);
   });
@@ -446,7 +369,7 @@ async function selectBatch(batchId) {
   if (!b) return;
   currentBatch = b;
 
-  $("workspaceBatchTitle").textContent = `${b.name} — Attendance`;
+  $("workspaceBatchTitle").textContent = `${b.name} — Attendance Workspace`;
   $("batchHubScreen").style.display = "none";
   $("appScreen").style.display = "block";
 
@@ -511,7 +434,7 @@ async function deleteBatch(batchId, batchName) {
     return;
   }
 
-  const confirmed = confirm(`Are you sure you want to delete "${batchName}"? This will remove its student associations.`);
+  const confirmed = confirm(`Are you sure you want to delete "${batchName}"?`);
   if (!confirmed) return;
 
   try {
@@ -566,7 +489,7 @@ function renderDailyAttendance() {
     body.innerHTML = `
       <tr>
         <td colspan="5" style="text-align:center; padding:24px; color:#64748b;">
-          ${students.length === 0 ? "No students in this batch. Add students in the Students tab." : "No matching students found."}
+          ${students.length === 0 ? "No students in this batch. Add students in the Students tab." : "No matching trainees found."}
         </td>
       </tr>
     `;
@@ -587,7 +510,7 @@ function renderDailyAttendance() {
         <div class="attendance-buttons">
           <button
             type="button"
-            class="attendance-button present-btn ${status === "Present" ? "selected" : ""}"
+            class="btn-mark btn-present ${status === "Present" ? "selected" : ""}"
             data-student-id="${s.id}"
             data-status="Present"
           >
@@ -595,7 +518,7 @@ function renderDailyAttendance() {
           </button>
           <button
             type="button"
-            class="attendance-button absent-btn ${status === "Absent" ? "selected" : ""}"
+            class="btn-mark btn-absent ${status === "Absent" ? "selected" : ""}"
             data-student-id="${s.id}"
             data-status="Absent"
           >
@@ -604,7 +527,7 @@ function renderDailyAttendance() {
         </div>
       </td>
       <td>
-        <span class="status-badge ${status === "Present" ? "badge-present" : status === "Absent" ? "badge-absent" : "badge-notmarked"}">
+        <span class="status-pill ${status === "Present" ? "pill-present" : status === "Absent" ? "pill-absent" : "pill-notmarked"}">
           ${status}
         </span>
       </td>
@@ -671,13 +594,13 @@ async function saveAttendance() {
 
     await loadBatchWorkspaceData();
     renderDailyAttendance();
-    showMessage("dailySaveMessage", `Attendance saved for ${formatDateDisplay(selectedDate)}`, "success");
+    showMessage("dailySaveMessage", `Attendance records saved for ${formatDateDisplay(selectedDate)}`, "success");
   } catch (err) {
     console.error("Save error:", err);
     showMessage("dailySaveMessage", getReadableError(err), "error");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Save Attendance";
+    btn.textContent = "Save Attendance Records";
   }
 }
 
@@ -746,7 +669,7 @@ function renderRegisterTable() {
     tr.innerHTML = `
       <td>${idx + 1}</td>
       <td><strong>${escapeHtml(s.employee_id)}</strong></td>
-      <td>${escapeHtml(s.name)} ${s.status === "LEFT" ? '<span style="color:#b33e3e; font-size:11px;">(Left)</span>' : ""}</td>
+      <td>${escapeHtml(s.name)} ${s.status === "LEFT" ? '<span style="color:#dc2626; font-size:11px;">(Left)</span>' : ""}</td>
     `;
 
     dates.forEach(d => {
@@ -812,15 +735,15 @@ async function copyRegisterForExcel() {
 
   try {
     await navigator.clipboard.writeText(tsvData);
-    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates formatted as DD-MM-YYYY with exact Present/Absent values).", "success");
+    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates in DD-MM-YYYY format with exact Present/Absent values).", "success");
   } catch (err) {
     console.error("Clipboard failure:", err);
-    showMessage("monthlyMessage", "Could not copy automatically. Check browser clipboard permissions.", "error");
+    showMessage("monthlyMessage", "Could not copy automatically. Check browser permissions.", "error");
   }
 }
 
 // ------------------------------------------------------------
-// STUDENTS (RENAMED FROM STUDENTS ROSTER)
+// STUDENTS
 // ------------------------------------------------------------
 function renderStudents() {
   const body = $("studentsTableBody");
@@ -835,16 +758,16 @@ function renderStudents() {
       <td><strong>${escapeHtml(s.employee_id)}</strong></td>
       <td>${escapeHtml(s.name)}</td>
       <td>
-        <span class="status-badge ${isLeft ? "badge-left" : "badge-active"}">
-          ${isLeft ? "Left / Inactive" : "Active"}
+        <span class="status-pill ${isLeft ? "pill-notmarked" : "pill-active"}">
+          ${isLeft ? "Left / Discontinued" : "Active"}
         </span>
       </td>
       <td>
-        <button type="button" class="small-button edit-student-btn" data-id="${s.id}">Edit</button>
-        <button type="button" class="small-button toggle-left-btn" data-id="${s.id}" data-current="${s.status || "ACTIVE"}">
+        <button type="button" class="btn-table-action edit-student-btn" data-id="${s.id}">Edit</button>
+        <button type="button" class="btn-table-action toggle-left-btn" data-id="${s.id}" data-current="${s.status || "ACTIVE"}">
           ${isLeft ? "Reactivate" : "Mark as Left"}
         </button>
-        <button type="button" class="small-button delete-student-btn danger" data-id="${s.id}">Delete</button>
+        <button type="button" class="btn-table-action text-danger delete-student-btn" data-id="${s.id}">Delete</button>
       </td>
     `;
     body.appendChild(row);
@@ -888,7 +811,7 @@ async function saveStudent(employeeId, name, studentId = null) {
 
 async function toggleStudentLeft(studentId, currentStatus) {
   const newStatus = currentStatus === "LEFT" ? "ACTIVE" : "LEFT";
-  const actionText = newStatus === "LEFT" ? "mark this student as Left (Discontinued)?" : "reactivate this student?";
+  const actionText = newStatus === "LEFT" ? "mark this student as Left?" : "reactivate this student?";
   if (!confirm(`Are you sure you want to ${actionText}`)) return;
 
   try {
@@ -942,7 +865,7 @@ function renderStudentReport() {
   const area = $("studentReport");
 
   if (!studentId) {
-    area.innerHTML = `<p class="empty-message">Select a student from the list.</p>`;
+    area.innerHTML = `<p class="empty-state">Select a student from the list.</p>`;
     return;
   }
 
@@ -970,7 +893,7 @@ function renderStudentReport() {
       <tr>
         <td>${formatDateDisplay(d)}</td>
         <td>
-          <span class="status-badge ${status === "Present" ? "badge-present" : status === "Absent" ? "badge-absent" : "badge-notmarked"}">
+          <span class="status-pill ${status === "Present" ? "pill-present" : status === "Absent" ? "pill-absent" : "pill-notmarked"}">
             ${status}
           </span>
         </td>
@@ -982,15 +905,15 @@ function renderStudentReport() {
   const pct = total > 0 ? ((p / total) * 100).toFixed(1) : "0.0";
 
   area.innerHTML = `
-    <div class="report-summary">
-      <div><strong>Student ID</strong><span>${escapeHtml(student.employee_id)}</span></div>
-      <div><strong>Name</strong><span>${escapeHtml(student.name)}</span></div>
-      <div><strong>Present</strong><span>${p}</span></div>
-      <div><strong>Absent</strong><span>${a}</span></div>
-      <div><strong>Attendance %</strong><span>${pct}%</span></div>
+    <div class="report-summary-grid">
+      <div class="rep-card"><strong>Student ID</strong><span>${escapeHtml(student.employee_id)}</span></div>
+      <div class="rep-card"><strong>Name</strong><span>${escapeHtml(student.name)}</span></div>
+      <div class="rep-card"><strong>Present</strong><span>${p}</span></div>
+      <div class="rep-card"><strong>Absent</strong><span>${a}</span></div>
+      <div class="rep-card"><strong>Attendance %</strong><span>${pct}%</span></div>
     </div>
-    <div class="table-container">
-      <table>
+    <div class="table-wrapper">
+      <table class="data-table">
         <thead>
           <tr>
             <th>Date</th>
@@ -1035,7 +958,7 @@ async function loadUsersList() {
         .filter(Boolean);
 
       const allocationLabel = u.role === "ADMIN" 
-        ? '<span style="color:#059669; font-weight:600;">All Batches (Admin Access)</span>'
+        ? '<span class="text-success font-bold">All Batches (Admin)</span>'
         : (allocatedNames.length > 0 ? allocatedNames.join(", ") : '<span style="color:#94a3b8;">None allocated</span>');
 
       const row = document.createElement("tr");
@@ -1043,13 +966,13 @@ async function loadUsersList() {
         <td>${i + 1}</td>
         <td><strong>${escapeHtml(u.employee_id)}</strong></td>
         <td>${escapeHtml(u.name)}</td>
-        <td><span class="status-badge ${u.role === "ADMIN" ? "badge-admin" : "badge-teacher"}">${u.role}</span></td>
+        <td><span class="status-pill ${u.role === "ADMIN" ? "pill-admin" : "pill-teacher"}">${u.role}</span></td>
         <td>${allocationLabel}</td>
         <td>
-          <button type="button" class="small-button reset-pwd-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Reset Pwd</button>
-          ${u.role !== "ADMIN" ? `<button type="button" class="small-button allocate-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Allocate</button>` : ""}
+          <button type="button" class="btn-table-action reset-pwd-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Reset Pwd</button>
+          ${u.role !== "ADMIN" ? `<button type="button" class="btn-table-action allocate-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Allocate</button>` : ""}
           ${isSuper ? '<span style="color:#64748b; font-size:12px; margin-left:6px;">Primary</span>' : `
-            <button type="button" class="small-button delete-user-btn danger" data-id="${u.id}">Remove</button>
+            <button type="button" class="btn-table-action text-danger delete-user-btn" data-id="${u.id}">Remove</button>
           `}
         </td>
       `;
@@ -1336,8 +1259,8 @@ function closeUserModal() {
 }
 
 function showSection(sectionId) {
-  document.querySelectorAll(".app-section").forEach(s => s.classList.remove("active-section"));
-  document.querySelectorAll(".nav-button").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active-section"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
 
   const target = $(sectionId);
   if (target) target.classList.add("active-section");
@@ -1369,7 +1292,6 @@ async function logout() {
 // ------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", async () => {
   initLiveClock();
-  initCelestialCanvas();
 
   // Landing CTAs
   $("landingLoginBtn").addEventListener("click", showLoginScreen);
@@ -1397,7 +1319,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("batchesGrid").addEventListener("click", e => {
-    const enterBtn = e.target.closest(".enter-batch-btn");
+    const enterBtn = e.target.closest(".btn-open-batch");
     const editBtn = e.target.closest(".edit-batch-btn");
     const delBtn = e.target.closest(".batch-delete-btn");
 
@@ -1415,7 +1337,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Workspace Navigation
-  document.querySelectorAll(".nav-button").forEach(btn => {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       showSection(btn.dataset.section);
       if (btn.dataset.section === "monthlySection") renderRegisterTable();
@@ -1441,7 +1363,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("studentSearch").addEventListener("input", renderDailyAttendance);
 
   $("dailyAttendanceBody").addEventListener("click", e => {
-    const btn = e.target.closest(".attendance-button");
+    const btn = e.target.closest(".btn-mark");
     if (!btn) return;
     handleAttendanceButton(btn.dataset.studentId, btn.dataset.status);
   });
@@ -1489,7 +1411,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("reportYearSelector").addEventListener("change", renderStudentReport);
   $("reportMonthSelector").addEventListener("change", renderStudentReport);
 
-  // Users, Password Reset & Batch Allocation
+  // Users & Password Reset
   $("addUserButton").addEventListener("click", openUserModal);
   $("closeUserModal").addEventListener("click", closeUserModal);
   $("cancelUserButton").addEventListener("click", closeUserModal);
@@ -1541,6 +1463,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === $("userModal")) closeUserModal();
   });
 
-  // Auto-detect session on landing page load
   await checkLandingSession();
 });

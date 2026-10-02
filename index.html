@@ -4,85 +4,79 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AMS — Attendance Management System</title>
-  <!-- Institutional SVG Favicon -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='8' fill='%230a2540'/><path d='M8 48 L32 14 L56 48' stroke='%2338bdf8' stroke-width='3' fill='none'/><text x='32' y='42' font-family='Arial, sans-serif' font-size='22' font-weight='900' fill='%23ffffff' text-anchor='middle'>AMS</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='6' fill='%230f2942'/><text x='24' y='32' font-family='Arial, sans-serif' font-size='18' font-weight='bold' fill='%23ffffff' text-anchor='middle'>AMS</text></svg>">
   <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
   <!-- ========================================================
-       SCREEN 1: OFFICIAL INSTITUTIONAL LANDING PORTAL
+       SCREEN 1: CLEAN CORPORATE LANDING PORTAL
        ======================================================== -->
-  <div id="landingScreen" class="landing-screen">
-    <header class="official-top-bar">
-      <div class="gov-identity">
-        <span class="gov-seal">AMS</span>
-        <div class="gov-titles">
-          <span class="gov-main-title">ATTENDANCE MANAGEMENT SYSTEM</span>
-          <span class="gov-sub-title">Enterprise Trainee Operations & Records Portal</span>
-        </div>
+  <div id="landingScreen" class="portal-landing-wrapper">
+    <header class="portal-nav">
+      <div class="nav-brand">
+        <span class="brand-badge">AMS</span>
+        <span class="brand-sub">Attendance Management System</span>
       </div>
-      <div class="portal-clock" id="portalClockBadge">
-        <span class="clock-icon">🕒</span>
+      <div class="nav-clock" id="liveClockBadge">
+        <span class="clock-dot"></span>
         <span id="liveClockText">Synchronizing Clock...</span>
       </div>
     </header>
 
-    <main class="portal-hero-container">
-      <div class="portal-hero-card">
-        <div class="badge-tag">OFFICIAL SYSTEM ACCESS</div>
-        <h1 class="portal-main-heading">Central Attendance Registry</h1>
-        <p class="portal-caption">Authorized access for institutional batch records, trainee verification, and attendance reporting.</p>
+    <main class="portal-center-box">
+      <div class="portal-card">
+        <div class="portal-seal">TRAINING ATTENDANCE PORTAL</div>
+        <h1>AMS Portal Access</h1>
+        <p class="portal-desc">Centralized attendance register, batch management, and trainee reporting system.</p>
 
-        <div class="portal-metrics-bar">
-          <div class="metric-item">
-            <span class="metric-label">Access Level</span>
-            <span class="metric-val">Administrative / Staff</span>
+        <div class="portal-status-strip">
+          <div class="status-col">
+            <span class="label">System Status</span>
+            <span class="value text-success">Active & Online</span>
           </div>
-          <div class="metric-item">
-            <span class="metric-label">Network Status</span>
-            <span class="metric-val status-online">Connected</span>
+          <div class="status-col">
+            <span class="label">Access</span>
+            <span class="value">Instructor / Admin</span>
           </div>
-          <div class="metric-item">
-            <span class="metric-label">Time Zone</span>
-            <span class="metric-val">IST (UTC +5:30)</span>
+          <div class="status-col">
+            <span class="label">Time Standard</span>
+            <span class="value">IST (UTC +5:30)</span>
           </div>
         </div>
 
-        <div class="portal-cta-cluster">
-          <button type="button" id="landingContinueBtn" class="primary-portal-btn" style="display: none;">
+        <div class="portal-cta-group">
+          <button type="button" id="landingContinueBtn" class="btn-primary-lg" style="display: none;">
             Continue to Workspace →
           </button>
-          <button type="button" id="landingLoginBtn" class="primary-portal-btn">
+          <button type="button" id="landingLoginBtn" class="btn-primary-lg">
             Sign In to Portal
           </button>
         </div>
       </div>
     </main>
 
-    <footer class="portal-footer">
-      <span>Official Attendance Management System • All Records Encrypted</span>
+    <footer class="portal-bottom-bar">
+      <span>Enterprise Training Operations • All Session Records Logged</span>
     </footer>
   </div>
 
   <!-- ========================================================
-       SCREEN 2: LOGIN MODAL SCREEN
+       SCREEN 2: LOGIN SCREEN
        ======================================================== -->
-  <div id="loginScreen" class="login-screen" style="display: none;">
-    <div class="login-card">
-      <button type="button" class="back-link-btn" id="backToLandingFromLogin">← Return to Portal</button>
-      <div class="brand-header">
-        <div class="login-seal">AMS</div>
-        <h1>Portal Authentication</h1>
-        <p class="hero-tagline">Enter your credentials to access the system</p>
+  <div id="loginScreen" class="login-wrapper" style="display: none;">
+    <div class="login-box">
+      <button type="button" class="btn-back" id="backToLandingFromLogin">← Back to Portal</button>
+      
+      <div class="login-header">
+        <span class="brand-badge">AMS</span>
+        <h2>Sign In</h2>
+        <p>Enter your Employee ID and password to proceed.</p>
       </div>
 
       <form id="loginForm">
         <div class="form-group">
-          <label for="loginEmployeeId">Employee ID or Registered Email</label>
+          <label for="loginEmployeeId">Employee ID or Email</label>
           <input
             type="text"
             id="loginEmployeeId"
@@ -103,8 +97,8 @@
           >
         </div>
 
-        <button type="submit" id="loginButton" class="primary-button full-width">Authenticate</button>
-        <p id="loginMessage" class="message" aria-live="polite"></p>
+        <button type="submit" id="loginButton" class="btn-submit">Sign In</button>
+        <p id="loginMessage" class="form-message" aria-live="polite"></p>
       </form>
     </div>
   </div>
@@ -112,32 +106,32 @@
   <!-- ========================================================
        SCREEN 3: BATCH SELECTION HUB
        ======================================================== -->
-  <div id="batchHubScreen" class="hub-screen" style="display: none;">
-    <header class="top-header">
-      <div class="header-brand">
-        <span class="header-seal">AMS</span>
+  <div id="batchHubScreen" class="hub-wrapper" style="display: none;">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="brand-badge">AMS</span>
         <div>
           <h1>Attendance Management System</h1>
-          <p>Batch Selection Directory</p>
+          <p>Training Batch Directory</p>
         </div>
       </div>
-      <div class="header-user">
+      <div class="header-right">
         <div class="user-pill">
-          <span class="user-indicator"></span>
+          <span class="indicator-dot"></span>
           <span id="hubLoggedInUser">User</span>
         </div>
-        <button type="button" class="logout-btn" onclick="logout()">Log Out</button>
+        <button type="button" class="btn-logout" onclick="logout()">Log Out</button>
       </div>
     </header>
 
-    <main class="main-container">
-      <div class="hub-hero">
+    <main class="page-container">
+      <div class="hub-header-bar">
         <div>
           <h2>Training Batches</h2>
-          <p id="hubSubtitle">Select an allocated batch workspace to manage records and attendance.</p>
+          <p id="hubSubtitle">Select your allocated batch to manage daily attendance and student records.</p>
         </div>
         <div id="adminBatchControls" style="display: none;">
-          <button type="button" id="createBatchBtn" class="primary-button">+ Add New Batch</button>
+          <button type="button" id="createBatchBtn" class="btn-action-primary">+ Add New Batch</button>
         </div>
       </div>
 
@@ -146,63 +140,63 @@
   </div>
 
   <!-- ========================================================
-       SCREEN 4: MAIN WORKSPACE
+       SCREEN 4: MAIN WORKSPACE (WITHIN ACTIVE BATCH)
        ======================================================== -->
-  <div id="appScreen" class="app-screen" style="display: none;">
-    <header class="top-header">
-      <div class="header-brand">
-        <span class="header-seal">AMS</span>
+  <div id="appScreen" class="app-wrapper" style="display: none;">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="brand-badge">AMS</span>
         <div>
           <h1 id="workspaceBatchTitle">Batch Attendance Workspace</h1>
           <p>Official Attendance Management System</p>
         </div>
       </div>
 
-      <div class="header-user">
-        <button type="button" id="switchBatchBtn" class="secondary-button small">⇄ Switch Batch</button>
+      <div class="header-right">
+        <button type="button" id="switchBatchBtn" class="btn-switch-batch">⇄ Switch Batch</button>
         <div class="user-pill">
-          <span class="user-indicator"></span>
+          <span class="indicator-dot"></span>
           <span id="loggedInUser">User</span>
         </div>
-        <button type="button" class="logout-btn" onclick="logout()">Log Out</button>
+        <button type="button" class="btn-logout" onclick="logout()">Log Out</button>
       </div>
     </header>
 
-    <main class="main-container">
-      <nav class="main-nav">
-        <button type="button" class="nav-button active" data-section="dailySection">
+    <main class="page-container">
+      <nav class="tab-nav">
+        <button type="button" class="tab-btn active" data-section="dailySection">
           Daily Attendance
         </button>
-        <button type="button" class="nav-button" data-section="monthlySection">
+        <button type="button" class="tab-btn" data-section="monthlySection">
           Register (Monthly / Yearly)
         </button>
-        <button type="button" class="nav-button" data-section="studentsSection">
+        <button type="button" class="tab-btn" data-section="studentsSection">
           Students
         </button>
-        <button type="button" class="nav-button" data-section="reportsSection">
+        <button type="button" class="tab-btn" data-section="reportsSection">
           Student Report
         </button>
-        <button type="button" class="nav-button" id="usersNavTab" data-section="usersSection" style="display: none;">
+        <button type="button" class="tab-btn" id="usersNavTab" data-section="usersSection" style="display: none;">
           Teachers & Admins
         </button>
       </nav>
 
       <!-- SECTION 1: DAILY ATTENDANCE -->
-      <section id="dailySection" class="app-section active-section">
-        <div class="section-header">
+      <section id="dailySection" class="content-section active-section">
+        <div class="section-title-strip">
           <div>
             <h2>Daily Attendance Record</h2>
-            <p>Select date parameters to record or inspect attendance for this batch.</p>
+            <p>Pick date parameters or click Today to mark Present or Absent.</p>
           </div>
         </div>
 
-        <div class="control-panel">
-          <div class="date-dropdown-cluster">
-            <div class="control-group">
+        <div class="filter-panel">
+          <div class="filter-group-date">
+            <div class="field-item">
               <label for="dailyYearSelector">Year</label>
               <select id="dailyYearSelector"></select>
             </div>
-            <div class="control-group">
+            <div class="field-item">
               <label for="dailyMonthSelector">Month</label>
               <select id="dailyMonthSelector">
                 <option value="01">January</option>
@@ -219,88 +213,88 @@
                 <option value="12">December</option>
               </select>
             </div>
-            <div class="control-group">
+            <div class="field-item">
               <label for="dailyDaySelector">Day</label>
               <select id="dailyDaySelector"></select>
             </div>
-            <div class="control-group align-self-end">
-              <button type="button" id="setTodayBtn" class="secondary-button small">Today's Date</button>
+            <div class="field-item align-end">
+              <button type="button" id="setTodayBtn" class="btn-outline-sm">Today's Date</button>
             </div>
           </div>
 
-          <div class="control-group search-control">
+          <div class="field-item search-field">
             <label for="studentSearch">Filter Trainee</label>
             <input type="search" id="studentSearch" placeholder="Search by Employee ID or Name">
           </div>
         </div>
 
-        <div class="summary-grid">
-          <div class="summary-card">
-            <span>Total Enrolled</span>
+        <div class="summary-cards">
+          <div class="sum-card">
+            <span class="sum-title">Total Enrolled</span>
             <strong id="dailyTotal">0</strong>
           </div>
-          <div class="summary-card present-summary">
-            <span>Present</span>
+          <div class="sum-card border-green">
+            <span class="sum-title">Present</span>
             <strong id="dailyPresent">0</strong>
           </div>
-          <div class="summary-card absent-summary">
-            <span>Absent</span>
+          <div class="sum-card border-red">
+            <span class="sum-title">Absent</span>
             <strong id="dailyAbsent">0</strong>
           </div>
-          <div class="summary-card not-marked-summary">
-            <span>Not Marked</span>
+          <div class="sum-card border-gray">
+            <span class="sum-title">Not Marked</span>
             <strong id="dailyNotMarked">0</strong>
           </div>
         </div>
 
-        <div class="table-container">
-          <table>
+        <div class="table-wrapper">
+          <table class="data-table">
             <thead>
               <tr>
                 <th style="width: 60px;">S.No</th>
                 <th style="width: 150px;">Employee ID</th>
                 <th>Student Name</th>
-                <th style="width: 220px;">Mark Status</th>
-                <th style="width: 140px;">Recorded Status</th>
+                <th style="width: 200px;">Mark Status</th>
+                <th style="width: 140px;">Current Status</th>
               </tr>
             </thead>
             <tbody id="dailyAttendanceBody"></tbody>
           </table>
         </div>
 
-        <div class="save-area">
-          <button type="button" id="saveAttendanceButton" class="primary-button">
+        <div class="action-footer">
+          <button type="button" id="saveAttendanceButton" class="btn-save">
             Save Attendance Records
           </button>
-          <span id="dailySaveMessage" class="message" aria-live="polite"></span>
+          <span id="dailySaveMessage" class="form-message" aria-live="polite"></span>
         </div>
       </section>
 
       <!-- SECTION 2: REGISTER -->
-      <section id="monthlySection" class="app-section">
-        <div class="section-header">
+      <section id="monthlySection" class="content-section">
+        <div class="section-title-strip">
           <div>
             <h2>Attendance Register</h2>
             <p>Export attendance grids formatted with dates (DD-MM-YYYY) and exact Present/Absent statuses.</p>
           </div>
-          <button type="button" id="copyMonthlyButton" class="primary-button">
+          <button type="button" id="copyMonthlyButton" class="btn-action-primary">
             Copy for Excel
           </button>
         </div>
 
-        <div class="control-panel">
-          <div class="control-group">
+        <div class="filter-panel">
+          <div class="field-item">
             <label for="registerViewMode">View Range</label>
             <select id="registerViewMode">
               <option value="monthly">Monthly View</option>
               <option value="yearly">Full Year View</option>
             </select>
           </div>
-          <div class="control-group">
+          <div class="field-item">
             <label for="registerYearSelector">Year</label>
             <select id="registerYearSelector"></select>
           </div>
-          <div class="control-group" id="registerMonthWrapper">
+          <div class="field-item" id="registerMonthWrapper">
             <label for="registerMonthSelector">Month</label>
             <select id="registerMonthSelector">
               <option value="01">January</option>
@@ -319,29 +313,29 @@
           </div>
         </div>
 
-        <div class="table-container">
-          <table id="monthlyTable" class="excel-styled-table">
+        <div class="table-wrapper">
+          <table id="monthlyTable" class="data-table excel-grid">
             <thead id="monthlyTableHead"></thead>
             <tbody id="monthlyTableBody"></tbody>
           </table>
         </div>
-        <p id="monthlyMessage" class="message" aria-live="polite"></p>
+        <p id="monthlyMessage" class="form-message" aria-live="polite"></p>
       </section>
 
       <!-- SECTION 3: STUDENTS -->
-      <section id="studentsSection" class="app-section">
-        <div class="section-header">
+      <section id="studentsSection" class="content-section">
+        <div class="section-title-strip">
           <div>
             <h2>Students</h2>
             <p>Manage students registered in this batch.</p>
           </div>
-          <button type="button" id="addStudentButton" class="primary-button">
+          <button type="button" id="addStudentButton" class="btn-action-primary">
             + Add Student
           </button>
         </div>
 
-        <div class="table-container">
-          <table>
+        <div class="table-wrapper">
+          <table class="data-table">
             <thead>
               <tr>
                 <th style="width: 60px;">S.No</th>
@@ -357,26 +351,26 @@
       </section>
 
       <!-- SECTION 4: REPORTS -->
-      <section id="reportsSection" class="app-section">
-        <div class="section-header">
+      <section id="reportsSection" class="content-section">
+        <div class="section-title-strip">
           <div>
             <h2>Individual Student Report</h2>
-            <p>Comprehensive date-wise attendance log and overall performance percentage.</p>
+            <p>Individual performance log and monthly attendance percentage.</p>
           </div>
         </div>
 
-        <div class="control-panel">
-          <div class="control-group">
+        <div class="filter-panel">
+          <div class="field-item">
             <label for="reportStudentSelector">Select Student</label>
             <select id="reportStudentSelector">
               <option value="">Select Student</option>
             </select>
           </div>
-          <div class="control-group">
+          <div class="field-item">
             <label for="reportYearSelector">Year</label>
             <select id="reportYearSelector"></select>
           </div>
-          <div class="control-group">
+          <div class="field-item">
             <label for="reportMonthSelector">Month</label>
             <select id="reportMonthSelector">
               <option value="all">All Months</option>
@@ -396,25 +390,25 @@
           </div>
         </div>
 
-        <div id="studentReport" class="report-area">
-          <p class="empty-message">Select a student and date range to view attendance report.</p>
+        <div id="studentReport" class="report-box">
+          <p class="empty-state">Select a student and date range to view attendance history.</p>
         </div>
       </section>
 
       <!-- SECTION 5: USERS & PERMISSIONS -->
-      <section id="usersSection" class="app-section">
-        <div class="section-header">
+      <section id="usersSection" class="content-section">
+        <div class="section-title-strip">
           <div>
             <h2>Teachers & Admins</h2>
             <p>Manage staff accounts, change passwords, and allocate permitted batches.</p>
           </div>
-          <button type="button" id="addUserButton" class="primary-button">
+          <button type="button" id="addUserButton" class="btn-action-primary">
             + Add Teacher / Admin
           </button>
         </div>
 
-        <div class="table-container">
-          <table>
+        <div class="table-wrapper">
+          <table class="data-table">
             <thead>
               <tr>
                 <th style="width: 60px;">S.No</th>
@@ -422,7 +416,7 @@
                 <th>Staff Name</th>
                 <th style="width: 120px;">Role</th>
                 <th>Allocated Batches</th>
-                <th style="width: 290px;">Actions</th>
+                <th style="width: 280px;">Actions</th>
               </tr>
             </thead>
             <tbody id="usersTableBody"></tbody>
@@ -436,11 +430,11 @@
        MODALS
        ======================================================== -->
   <!-- MODAL: ADD / EDIT BATCH -->
-  <div id="batchModal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="batchModalTitle">Create New Batch</h2>
-        <button type="button" id="closeBatchModal" class="close-button">&times;</button>
+  <div id="batchModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-top">
+        <h3 id="batchModalTitle">Create New Batch</h3>
+        <button type="button" id="closeBatchModal" class="btn-close-modal">&times;</button>
       </div>
       <form id="batchForm">
         <input type="hidden" id="batchEditId">
@@ -448,43 +442,41 @@
           <label for="newBatchName">Batch Title</label>
           <input type="text" id="newBatchName" placeholder="e.g. Batch 01 or 2026 Trainees" required>
         </div>
-        <div class="modal-actions">
-          <button type="button" id="cancelBatchButton" class="secondary-button">Cancel</button>
-          <button type="submit" class="primary-button">Save Batch</button>
+        <div class="modal-btn-row">
+          <button type="button" id="cancelBatchButton" class="btn-cancel">Cancel</button>
+          <button type="submit" class="btn-submit-action">Save Batch</button>
         </div>
-        <p id="batchFormMessage" class="message" aria-live="polite"></p>
+        <p id="batchFormMessage" class="form-message" aria-live="polite"></p>
       </form>
     </div>
   </div>
 
   <!-- MODAL: ALLOCATE BATCHES -->
-  <div id="allocateModal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="allocateModalTitle">Allocate Batches</h2>
-        <button type="button" id="closeAllocateModal" class="close-button">&times;</button>
+  <div id="allocateModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-top">
+        <h3 id="allocateModalTitle">Allocate Batches</h3>
+        <button type="button" id="closeAllocateModal" class="btn-close-modal">&times;</button>
       </div>
-      <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 16px;">
-        Select the batches this staff member is authorized to access:
-      </p>
+      <p class="modal-hint">Select the batches this staff member is authorized to access:</p>
       <form id="allocateForm">
         <input type="hidden" id="allocateProfileId">
-        <div id="allocateBatchCheckboxes" class="checkbox-list"></div>
-        <div class="modal-actions">
-          <button type="button" id="cancelAllocateButton" class="secondary-button">Cancel</button>
-          <button type="submit" id="saveAllocateButton" class="primary-button">Save Allocation</button>
+        <div id="allocateBatchCheckboxes" class="checkbox-container"></div>
+        <div class="modal-btn-row">
+          <button type="button" id="cancelAllocateButton" class="btn-cancel">Cancel</button>
+          <button type="submit" id="saveAllocateButton" class="btn-submit-action">Save Allocation</button>
         </div>
-        <p id="allocateFormMessage" class="message" aria-live="polite"></p>
+        <p id="allocateFormMessage" class="form-message" aria-live="polite"></p>
       </form>
     </div>
   </div>
 
   <!-- MODAL: RESET PASSWORD -->
-  <div id="passwordModal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="passwordModalTitle">Reset Password</h2>
-        <button type="button" id="closePasswordModal" class="close-button">&times;</button>
+  <div id="passwordModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-top">
+        <h3 id="passwordModalTitle">Reset Password</h3>
+        <button type="button" id="closePasswordModal" class="btn-close-modal">&times;</button>
       </div>
       <form id="passwordForm">
         <input type="hidden" id="passwordTargetUserId">
@@ -492,21 +484,21 @@
           <label for="newStaffPassword">New Password</label>
           <input type="password" id="newStaffPassword" placeholder="Minimum 6 characters" required>
         </div>
-        <div class="modal-actions">
-          <button type="button" id="cancelPasswordButton" class="secondary-button">Cancel</button>
-          <button type="submit" id="savePasswordButton" class="primary-button">Update Password</button>
+        <div class="modal-btn-row">
+          <button type="button" id="cancelPasswordButton" class="btn-cancel">Cancel</button>
+          <button type="submit" id="savePasswordButton" class="btn-submit-action">Update Password</button>
         </div>
-        <p id="passwordFormMessage" class="message" aria-live="polite"></p>
+        <p id="passwordFormMessage" class="form-message" aria-live="polite"></p>
       </form>
     </div>
   </div>
 
   <!-- MODAL: ADD / EDIT STUDENT -->
-  <div id="studentModal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 id="studentModalTitle">Add Student</h2>
-        <button type="button" id="closeStudentModal" class="close-button">&times;</button>
+  <div id="studentModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-top">
+        <h3 id="studentModalTitle">Add Student</h3>
+        <button type="button" id="closeStudentModal" class="btn-close-modal">&times;</button>
       </div>
       <form id="studentForm">
         <input type="hidden" id="studentEditId">
@@ -518,21 +510,21 @@
           <label for="studentName">Student Name</label>
           <input type="text" id="studentName" required placeholder="Full Name">
         </div>
-        <div class="modal-actions">
-          <button type="button" id="cancelStudentButton" class="secondary-button">Cancel</button>
-          <button type="submit" class="primary-button">Save Student</button>
+        <div class="modal-btn-row">
+          <button type="button" id="cancelStudentButton" class="btn-cancel">Cancel</button>
+          <button type="submit" class="btn-submit-action">Save Student</button>
         </div>
-        <p id="studentFormMessage" class="message" aria-live="polite"></p>
+        <p id="studentFormMessage" class="form-message" aria-live="polite"></p>
       </form>
     </div>
   </div>
 
   <!-- MODAL: ADD USER -->
-  <div id="userModal" class="modal" style="display: none;">
-    <div class="modal-content">
-      <div class="modal-header">
+  <div id="userModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-top">
         <h2>Add Teacher / Admin</h2>
-        <button type="button" id="closeUserModal" class="close-button">&times;</button>
+        <button type="button" id="closeUserModal" class="btn-close-modal">&times;</button>
       </div>
       <form id="userForm">
         <div class="form-group">
@@ -554,11 +546,11 @@
           <label for="userPassword">Initial Password</label>
           <input type="password" id="userPassword" placeholder="Minimum 6 characters" required>
         </div>
-        <div class="modal-actions">
-          <button type="button" id="cancelUserButton" class="secondary-button">Cancel</button>
-          <button type="submit" id="saveUserButton" class="primary-button">Create Account</button>
+        <div class="modal-btn-row">
+          <button type="button" id="cancelUserButton" class="btn-cancel">Cancel</button>
+          <button type="submit" id="saveUserButton" class="btn-submit-action">Create Account</button>
         </div>
-        <p id="userFormMessage" class="message" aria-live="polite"></p>
+        <p id="userFormMessage" class="form-message" aria-live="polite"></p>
       </form>
     </div>
   </div>
