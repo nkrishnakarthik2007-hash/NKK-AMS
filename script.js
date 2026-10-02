@@ -1,6 +1,6 @@
 // ============================================================
 // AMS — ATTENDANCE MANAGEMENT SYSTEM
-// CONTROLLER (PERSISTENCE, BATCH WORKSPACES, STICKY TABLES)
+// CONTROLLER: PERSISTENT SUPABASE SYNC & STICKY HORIZONTAL REGISTER
 // ============================================================
 
 const EMAIL_DOMAIN = "attendance.example.com";
@@ -24,7 +24,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   }
 });
 
-// State Variables
+// In-Memory State
 let currentUser = null;
 let currentProfile = null;
 let allBatches = [];
@@ -434,12 +434,12 @@ async function deleteBatch(batchId, batchName) {
 }
 
 // ------------------------------------------------------------
-// LOAD DATA FOR ACTIVE BATCH (EXACT SCOPING)
+// LOAD AND SYNC ATTENDANCE FOR ACTIVE BATCH
 // ------------------------------------------------------------
 async function loadBatchWorkspaceData() {
   if (!currentBatch) return;
 
-  // 1. Fetch students assigned to this batch
+  // 1. Fetch all students registered under this batch
   const { data: batchStudents, error: studErr } = await sb
     .from("students")
     .select("*")
@@ -457,7 +457,7 @@ async function loadBatchWorkspaceData() {
 
   const studentIds = students.map(s => s.id);
 
-  // 2. Fetch all recorded attendance dates and marks for these batch students
+  // 2. Fetch all recorded attendance rows and dates registered
   const [datesRes, attRes] = await Promise.all([
     sb.from("attendance_dates").select("*").order("attendance_date", { ascending: true }),
     sb.from("attendance").select("*").in("student_id", studentIds)
@@ -594,16 +594,19 @@ async function saveAttendance() {
   btn.textContent = "Saving to Supabase...";
 
   try {
+    // 1. Ensure the date is registered
     const { error: dateErr } = await sb
       .from("attendance_dates")
       .upsert({ attendance_date: selectedDate }, { onConflict: "attendance_date" });
     if (dateErr) throw dateErr;
 
+    // 2. Persist attendance entries
     const { error: attErr } = await sb
       .from("attendance")
       .upsert(records, { onConflict: "attendance_date,student_id" });
     if (attErr) throw attErr;
 
+    // 3. Fully re-fetch from database so memory and cache never desynchronize
     await loadBatchWorkspaceData();
     renderDailyAttendance();
     renderRegisterTable();
@@ -620,24 +623,36 @@ async function saveAttendance() {
 }
 
 // ------------------------------------------------------------
-// REGISTER (HORIZONTAL SCROLL & STICKY COLUMNS)
+// REGISTER (MONTHLY / YEARLY) WITH PERSISTENT DATE DISCOVERY
 // ------------------------------------------------------------
 function getRegisterDates() {
   const mode = $("registerViewMode").value;
   const year = $("registerYearSelector").value;
   const month = $("registerMonthSelector").value;
 
+  // Combine dates from attendance_dates table AND any recorded attendance marks
+  const discoveredDates = new Set();
+  
+  attendanceDates.forEach(d => {
+    if (d.attendance_date) discoveredDates.add(d.attendance_date);
+  });
+
+  attendanceRecords.forEach(r => {
+    if (r.attendance_date) discoveredDates.add(r.attendance_date);
+  });
+
+  const allDatesList = Array.from(discoveredDates);
+
   if (mode === "yearly") {
-    return attendanceDates
-      .filter(d => d.attendance_date.startsWith(`${year}-`))
-      .map(d => d.attendance_date)
+    return allDatesList
+      .filter(d => d.startsWith(`${year}-`))
       .sort();
   }
 
+  // Monthly View
   const prefix = `${year}-${month}`;
-  return attendanceDates
-    .filter(d => d.attendance_date.startsWith(prefix))
-    .map(d => d.attendance_date)
+  return allDatesList
+    .filter(d => d.startsWith(prefix))
     .sort();
 }
 
@@ -674,6 +689,13 @@ function renderRegisterTable() {
 
   if (students.length === 0) {
     body.innerHTML = `<tr><td colspan="${dates.length + 6}" style="text-align:center; padding:20px; color:#64748b;">No students enrolled in this batch.</td></tr>`;
+    return;
+  }
+
+  if (dates.length === 0) {
+    const mode = $("registerViewMode").value;
+    const periodLabel = mode === "yearly" ? $("registerYearSelector").value : `${$("registerMonthSelector").value}-${$("registerYearSelector").value}`;
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No attendance dates recorded for ${periodLabel}. Mark and save daily attendance to populate dates here.</td></tr>`;
     return;
   }
 
@@ -760,7 +782,7 @@ async function copyRegisterForExcel() {
 }
 
 // ------------------------------------------------------------
-// STUDENTS
+// STUDENTS MANAGEMENT
 // ------------------------------------------------------------
 function renderStudents() {
   const body = $("studentsTableBody");
@@ -837,6 +859,7 @@ async function toggleStudentLeft(studentId, currentStatus) {
     await loadBatchWorkspaceData();
     renderStudents();
     renderDailyAttendance();
+    renderRegisterTable();
   } catch (err) {
     alert(getReadableError(err));
   }
@@ -889,13 +912,7 @@ function renderStudentReport() {
   const student = students.find(s => String(s.id) === String(studentId));
   if (!student) return;
 
-  const dates = attendanceDates
-    .map(d => d.attendance_date)
-    .filter(d => {
-      if (!d.startsWith(`${year}-`)) return false;
-      return month === "all" || d.startsWith(`${year}-${month}`);
-    })
-    .sort();
+  const dates = getRegisterDates();
 
   let p = 0;
   let a = 0;
@@ -1355,6 +1372,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  // Daily Controls
   $("dailyYearSelector").addEventListener("change", () => {
     populateDailyDays();
     renderDailyAttendance();
@@ -1377,6 +1395,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   $("saveAttendanceButton").addEventListener("click", saveAttendance);
 
+  // Register Controls
   $("registerViewMode").addEventListener("change", e => {
     $("registerMonthWrapper").style.display = e.target.value === "yearly" ? "none" : "block";
     renderRegisterTable();
@@ -1385,6 +1404,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("registerMonthSelector").addEventListener("change", renderRegisterTable);
   $("copyMonthlyButton").addEventListener("click", copyRegisterForExcel);
 
+  // Students Controls
   $("addStudentButton").addEventListener("click", () => openStudentModal());
   $("closeStudentModal").addEventListener("click", closeStudentModal);
   $("cancelStudentButton").addEventListener("click", closeStudentModal);
@@ -1412,10 +1432,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Reports Controls
   $("reportStudentSelector").addEventListener("change", renderStudentReport);
   $("reportYearSelector").addEventListener("change", renderStudentReport);
   $("reportMonthSelector").addEventListener("change", renderStudentReport);
 
+  // Users Controls
   $("addUserButton").addEventListener("click", openUserModal);
   $("closeUserModal").addEventListener("click", closeUserModal);
   $("cancelUserButton").addEventListener("click", closeUserModal);

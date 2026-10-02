@@ -1,6 +1,6 @@
 /* ============================================================
    AMS — ATTENDANCE MANAGEMENT SYSTEM
-   CLEAN INSTITUTIONAL STYLES (WITH STICKY COLUMNS & SCROLLBAR)
+   CLEAN INSTITUTIONAL STYLES (WITH FROZEN COLS & HORIZONTAL SCROLL)
    ============================================================ */
 
 :root {
@@ -544,7 +544,7 @@ input:focus, select:focus {
 }
 
 /* ============================================================
-   TABLE WRAPPER & HORIZONTAL SCROLLBAR
+   HORIZONTAL SCROLL & STICKY COLUMNS
    ============================================================ */
 .table-wrapper {
   width: 100%;
@@ -555,19 +555,21 @@ input:focus, select:focus {
   border: 1px solid var(--border-light);
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
+/* Custom styled horizontal scrollbar */
 .table-wrapper::-webkit-scrollbar {
-  height: 10px;
+  height: 11px;
 }
 .table-wrapper::-webkit-scrollbar-track {
   background: #f1f5f9;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 .table-wrapper::-webkit-scrollbar-thumb {
   background: #94a3b8;
-  border-radius: 4px;
+  border-radius: 5px;
+  border: 2px solid #f1f5f9;
 }
 .table-wrapper::-webkit-scrollbar-thumb:hover {
   background: #64748b;
@@ -603,7 +605,7 @@ input:focus, select:focus {
   background: #f8fafc;
 }
 
-/* STICKY COLUMNS FOR REGISTER & EXCEL GRIDS */
+/* STICKY COLUMNS: S.No, Employee ID, Student Name */
 .excel-grid th.sticky-col,
 .excel-grid td.sticky-col {
   position: sticky;
@@ -631,20 +633,21 @@ input:focus, select:focus {
 
 .excel-grid .col-empid {
   left: 55px;
-  width: 130px;
-  min-width: 130px;
+  width: 125px;
+  min-width: 125px;
 }
 
 .excel-grid .col-name {
-  left: 185px;
+  left: 180px;
   min-width: 220px;
-  box-shadow: 3px 0 5px -2px rgba(0, 0, 0, 0.12);
+  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12); /* clean visual separator */
 }
 
+/* DYNAMIC DATE & STATS COLUMNS */
 .excel-grid th.date-col,
 .excel-grid td.date-col {
-  min-width: 100px;
-  max-width: 110px;
+  min-width: 110px;
+  max-width: 120px;
   text-align: center;
 }
 
@@ -698,7 +701,7 @@ input:focus, select:focus {
 .pill-admin { background: #ede9fe; color: #6d28d9; }
 .pill-teacher { background: #e0e7ff; color: #4338ca; }
 
-.excel-grid td.cell-present { color: var(--green); font-weight: 600; background: #f0fdf4; }
+.excel-grid td.cell-present { color: var(--green); font-weight: 600; background: #ecfdf5; }
 .excel-grid td.cell-absent { color: var(--red); font-weight: 600; background: #fef2f2; }
 
 .action-footer {
