@@ -15,4 +15,4 @@
 
 const SUPABASE_URL = "https://dggokugqqeddfydcjvpb.supabase.co";
 
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YzZ_lYn0fCUUfHOV0CJyiA_04IipIcG";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Qpr9qKeEfxvdYCwHIospmg_sxXLqKJR";
