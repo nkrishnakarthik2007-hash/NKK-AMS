@@ -1,6 +1,6 @@
 // ============================================================
 // AMS — THE ONE AND ONLY ATTENDANCE MANAGEMENT SYSTEM
-// CONTROLLER: BATCH HUB, ALLOCATION & PERMISSIONS
+// CONTROLLER: LANDING HERO, ORBITS, CLOCK, BATCHES & USERS
 // ============================================================
 
 const EMAIL_DOMAIN = "attendance.example.com";
@@ -79,6 +79,110 @@ function getReadableError(error) {
 }
 
 // ------------------------------------------------------------
+// INTERNET / LOCAL TIME CLOCK & DATE
+// ------------------------------------------------------------
+function initLiveClock() {
+  function updateTime() {
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+    const timeFormatted = now.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+    });
+    const badge = $("liveClockText");
+    if (badge) {
+      badge.textContent = `${dateFormatted} • ${timeFormatted} (IST)`;
+    }
+  }
+  updateTime();
+  setInterval(updateTime, 1000);
+}
+
+// ------------------------------------------------------------
+// CELESTIAL ORBIT CANVAS ANIMATION
+// ------------------------------------------------------------
+function initCelestialCanvas() {
+  const canvas = $("orbitCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  let w = (canvas.width = window.innerWidth);
+  let h = (canvas.height = window.innerHeight);
+
+  window.addEventListener("resize", () => {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  });
+
+  const stars = Array.from({ length: 90 }, () => ({
+    x: Math.random() * w,
+    y: Math.random() * h,
+    radius: Math.random() * 1.4 + 0.3,
+    alpha: Math.random() * 0.7 + 0.2,
+    speed: Math.random() * 0.008 + 0.003
+  }));
+
+  const rings = [
+    { radiusX: 240, radiusY: 110, tilt: -0.22, speed: 0.009, angle: 0, planetRadius: 4.5, color: "#38bdf8" },
+    { radiusX: 370, radiusY: 170, tilt: -0.22, speed: 0.006, angle: 2.1, planetRadius: 6, color: "#60a5fa" },
+    { radiusX: 520, radiusY: 230, tilt: -0.22, speed: 0.0035, angle: 4.3, planetRadius: 5.5, color: "#a78bfa" }
+  ];
+
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Subtle twinkling stars
+    stars.forEach(s => {
+      s.alpha += Math.sin(Date.now() * s.speed) * 0.015;
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, Math.min(0.9, s.alpha))})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    const centerX = w / 2;
+    const centerY = h * 0.44;
+
+    rings.forEach(ring => {
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(ring.tilt);
+
+      // Orbital ellipse track
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, ring.radiusX, ring.radiusY, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Orbiting node/planet
+      ring.angle += ring.speed;
+      const px = Math.cos(ring.angle) * ring.radiusX;
+      const py = Math.sin(ring.angle) * ring.radiusY;
+
+      ctx.fillStyle = ring.color;
+      ctx.shadowColor = ring.color;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(px, py, ring.planetRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    });
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
+// ------------------------------------------------------------
 // DATE DROPDOWN GENERATORS
 // ------------------------------------------------------------
 function populateYearSelects() {
@@ -119,6 +223,14 @@ function populateDailyDays() {
     }
     daySel.appendChild(opt);
   }
+}
+
+function setDateSelectorsToToday() {
+  const today = new Date();
+  $("dailyYearSelector").value = String(today.getFullYear());
+  $("dailyMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
+  populateDailyDays();
+  $("dailyDaySelector").value = String(today.getDate()).padStart(2, "0");
 }
 
 function getSelectedDailyDate() {
@@ -202,7 +314,6 @@ async function enterApp() {
     $("loggedInUser").textContent = userDisplay;
     $("hubLoggedInUser").textContent = userDisplay;
 
-    // Show/hide Admin Navigation
     if (profile.role === "ADMIN") {
       $("usersNavTab").style.display = "inline-block";
       $("adminBatchControls").style.display = "block";
@@ -223,9 +334,7 @@ async function enterApp() {
   } catch (err) {
     console.error("Startup error:", err);
     await sb.auth.signOut();
-    $("loginScreen").style.display = "flex";
-    $("batchHubScreen").style.display = "none";
-    $("appScreen").style.display = "none";
+    showLandingScreen();
     showMessage("loginMessage", getReadableError(err), "error");
     $("loginButton").disabled = false;
     $("loginButton").textContent = "Sign In";
@@ -233,23 +342,54 @@ async function enterApp() {
 }
 
 // ------------------------------------------------------------
-// BATCH HUB & PERMISSIONS
+// SCREEN TRANSITIONS
+// ------------------------------------------------------------
+function showLandingScreen() {
+  $("landingScreen").style.display = "flex";
+  $("loginScreen").style.display = "none";
+  $("batchHubScreen").style.display = "none";
+  $("appScreen").style.display = "none";
+}
+
+function showLoginScreen() {
+  $("landingScreen").style.display = "none";
+  $("loginScreen").style.display = "flex";
+  $("batchHubScreen").style.display = "none";
+  $("appScreen").style.display = "none";
+  $("loginEmployeeId").focus();
+}
+
+async function checkLandingSession() {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session && session.user) {
+      $("landingContinueBtn").style.display = "inline-flex";
+      $("landingLoginBtn").textContent = "Switch Account";
+    } else {
+      $("landingContinueBtn").style.display = "none";
+      $("landingLoginBtn").textContent = "Sign In to Portal";
+    }
+  } catch (e) {
+    $("landingContinueBtn").style.display = "none";
+  }
+}
+
+// ------------------------------------------------------------
+// BATCH HUB & ALLOCATION
 // ------------------------------------------------------------
 async function openBatchHub() {
+  $("landingScreen").style.display = "none";
   $("loginScreen").style.display = "none";
   $("appScreen").style.display = "none";
   $("batchHubScreen").style.display = "block";
 
-  // Load all batches
   const { data: bData } = await sb.from("batches").select("*").order("name", { ascending: true });
   allBatches = bData || [];
 
   if (currentProfile.role === "ADMIN") {
-    // Admins see all batches
     permittedBatches = allBatches;
     $("hubSubtitle").textContent = "Admin Portal: Select any batch to record attendance, manage rosters, or allocate batches to staff.";
   } else {
-    // Teachers only see allocated batches
     const { data: allocData } = await sb
       .from("teacher_batches")
       .select("batch_id")
@@ -286,7 +426,12 @@ function renderBatchesGrid() {
     card.innerHTML = `
       <div class="batch-card-top">
         <span class="batch-icon">📚</span>
-        ${isSuperAdmin ? `<button type="button" class="batch-delete-btn" title="Delete Batch" data-id="${b.id}" data-name="${escapeHtml(b.name)}">🗑</button>` : ""}
+        ${isSuperAdmin ? `
+          <div class="batch-card-actions">
+            <button type="button" class="batch-action-btn edit-batch-btn" title="Rename Batch" data-id="${b.id}" data-name="${escapeHtml(b.name)}">✎</button>
+            <button type="button" class="batch-action-btn batch-delete-btn" title="Delete Batch" data-id="${b.id}" data-name="${escapeHtml(b.name)}">🗑</button>
+          </div>
+        ` : ""}
       </div>
       <h3 class="batch-name">${escapeHtml(b.name)}</h3>
       <p class="batch-sub">Training Batch Workspace</p>
@@ -315,7 +460,29 @@ async function selectBatch(batchId) {
   if (currentProfile.role === "ADMIN") loadUsersList();
 }
 
-async function createBatch(name) {
+function openCreateBatchModal() {
+  $("batchModalTitle").textContent = "Create New Batch";
+  $("batchEditId").value = "";
+  $("newBatchName").value = "";
+  clearMessage("batchFormMessage");
+  $("batchModal").style.display = "flex";
+  $("newBatchName").focus();
+}
+
+function openEditBatchModal(batchId, batchName) {
+  $("batchModalTitle").textContent = "Rename Batch";
+  $("batchEditId").value = batchId;
+  $("newBatchName").value = batchName;
+  clearMessage("batchFormMessage");
+  $("batchModal").style.display = "flex";
+  $("newBatchName").focus();
+}
+
+function closeBatchModal() {
+  $("batchModal").style.display = "none";
+}
+
+async function saveBatch(batchId, name) {
   clearMessage("batchFormMessage");
   const cleanName = name.trim();
   if (!cleanName) {
@@ -324,8 +491,13 @@ async function createBatch(name) {
   }
 
   try {
-    const { error } = await sb.from("batches").insert({ name: cleanName });
-    if (error) throw error;
+    if (batchId) {
+      const { error } = await sb.from("batches").update({ name: cleanName }).eq("id", batchId);
+      if (error) throw error;
+    } else {
+      const { error } = await sb.from("batches").insert({ name: cleanName });
+      if (error) throw error;
+    }
     closeBatchModal();
     await openBatchHub();
   } catch (err) {
@@ -394,7 +566,7 @@ function renderDailyAttendance() {
     body.innerHTML = `
       <tr>
         <td colspan="5" style="text-align:center; padding:24px; color:#64748b;">
-          ${students.length === 0 ? "No students in this batch. Add students in the Students Roster tab." : "No matching students found."}
+          ${students.length === 0 ? "No students in this batch. Add students in the Students tab." : "No matching students found."}
         </td>
       </tr>
     `;
@@ -640,7 +812,7 @@ async function copyRegisterForExcel() {
 
   try {
     await navigator.clipboard.writeText(tsvData);
-    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates in DD-MM-YYYY format with exact Present/Absent values).", "success");
+    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates formatted as DD-MM-YYYY with exact Present/Absent values).", "success");
   } catch (err) {
     console.error("Clipboard failure:", err);
     showMessage("monthlyMessage", "Could not copy automatically. Check browser clipboard permissions.", "error");
@@ -648,7 +820,7 @@ async function copyRegisterForExcel() {
 }
 
 // ------------------------------------------------------------
-// STUDENTS ROSTER
+// STUDENTS (RENAMED FROM STUDENTS ROSTER)
 // ------------------------------------------------------------
 function renderStudents() {
   const body = $("studentsTableBody");
@@ -834,7 +1006,7 @@ function renderStudentReport() {
 }
 
 // ------------------------------------------------------------
-// USERS & BATCH ALLOCATION
+// USERS, PERMISSIONS & PASSWORD RESET
 // ------------------------------------------------------------
 async function loadUsersList() {
   const body = $("usersTableBody");
@@ -874,7 +1046,8 @@ async function loadUsersList() {
         <td><span class="status-badge ${u.role === "ADMIN" ? "badge-admin" : "badge-teacher"}">${u.role}</span></td>
         <td>${allocationLabel}</td>
         <td>
-          ${u.role !== "ADMIN" ? `<button type="button" class="small-button allocate-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Allocate Batches</button>` : ""}
+          <button type="button" class="small-button reset-pwd-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Reset Pwd</button>
+          ${u.role !== "ADMIN" ? `<button type="button" class="small-button allocate-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Allocate</button>` : ""}
           ${isSuper ? '<span style="color:#64748b; font-size:12px; margin-left:6px;">Primary</span>' : `
             <button type="button" class="small-button delete-user-btn danger" data-id="${u.id}">Remove</button>
           `}
@@ -887,12 +1060,71 @@ async function loadUsersList() {
   }
 }
 
+function openPasswordModal(userId, userName) {
+  $("passwordTargetUserId").value = userId;
+  $("passwordModalTitle").textContent = `Reset Password — ${userName}`;
+  $("newStaffPassword").value = "";
+  clearMessage("passwordFormMessage");
+  $("passwordModal").style.display = "flex";
+  $("newStaffPassword").focus();
+}
+
+function closePasswordModal() {
+  $("passwordModal").style.display = "none";
+}
+
+async function handlePasswordReset() {
+  clearMessage("passwordFormMessage");
+  const userId = $("passwordTargetUserId").value;
+  const newPassword = $("newStaffPassword").value;
+
+  if (!newPassword || newPassword.length < 6) {
+    showMessage("passwordFormMessage", "Password must be at least 6 characters.", "error");
+    return;
+  }
+
+  const btn = $("savePasswordButton");
+  btn.disabled = true;
+  btn.textContent = "Updating...";
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const token = session ? session.access_token : "";
+
+    const payload = {
+      action: "updateUser",
+      userId: userId,
+      password: newPassword
+    };
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_PUBLISHABLE_KEY,
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const resData = await res.json().catch(() => ({}));
+    if (!res.ok || resData.error) throw new Error(resData.error || `Update failed (${res.status})`);
+
+    closePasswordModal();
+    alert("Password updated successfully.");
+  } catch (err) {
+    showMessage("passwordFormMessage", getReadableError(err), "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Update Password";
+  }
+}
+
 async function openAllocateModal(profileId, teacherName) {
   $("allocateProfileId").value = profileId;
   $("allocateModalTitle").textContent = `Allocate Batches — ${teacherName}`;
   clearMessage("allocateFormMessage");
 
-  // Get current allocations
   const { data: currentAlloc } = await sb
     .from("teacher_batches")
     .select("batch_id")
@@ -935,10 +1167,8 @@ async function saveBatchAllocation() {
   btn.textContent = "Saving...";
 
   try {
-    // Delete existing allocations
     await sb.from("teacher_batches").delete().eq("profile_id", profileId);
 
-    // Insert new allocations
     if (selectedBatchIds.length > 0) {
       const rows = selectedBatchIds.map(bid => ({
         profile_id: profileId,
@@ -1070,17 +1300,6 @@ async function removeUser(userId) {
 // ------------------------------------------------------------
 // MODALS & NAVIGATION
 // ------------------------------------------------------------
-function openBatchModal() {
-  $("batchModal").style.display = "flex";
-  $("batchForm").reset();
-  clearMessage("batchFormMessage");
-  $("newBatchName").focus();
-}
-
-function closeBatchModal() {
-  $("batchModal").style.display = "none";
-}
-
 function openStudentModal(student = null) {
   $("studentModal").style.display = "flex";
   clearMessage("studentFormMessage");
@@ -1136,9 +1355,8 @@ async function logout() {
     currentUser = null;
     currentProfile = null;
     currentBatch = null;
-    $("appScreen").style.display = "none";
-    $("batchHubScreen").style.display = "none";
-    $("loginScreen").style.display = "flex";
+    showLandingScreen();
+    checkLandingSession();
     $("loginForm").reset();
     clearMessage("loginMessage");
     $("loginButton").disabled = false;
@@ -1147,33 +1365,48 @@ async function logout() {
 }
 
 // ------------------------------------------------------------
-// INITIALIZATION & EVENT DELEGATION
+// INITIALIZATION
 // ------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", async () => {
+  initLiveClock();
+  initCelestialCanvas();
+
+  // Landing CTAs
+  $("landingLoginBtn").addEventListener("click", showLoginScreen);
+  $("landingContinueBtn").addEventListener("click", async () => {
+    await enterApp();
+  });
+  $("backToLandingFromLogin").addEventListener("click", showLandingScreen);
+
   // Login Form
   $("loginForm").addEventListener("submit", e => {
     e.preventDefault();
     login($("loginEmployeeId").value, $("loginPassword").value);
   });
 
-  // Switch Batch Button
+  // Hub Navigation
   $("switchBatchBtn").addEventListener("click", openBatchHub);
 
   // Batch Hub Actions
-  $("createBatchBtn").addEventListener("click", openBatchModal);
+  $("createBatchBtn").addEventListener("click", openCreateBatchModal);
   $("closeBatchModal").addEventListener("click", closeBatchModal);
   $("cancelBatchButton").addEventListener("click", closeBatchModal);
   $("batchForm").addEventListener("submit", e => {
     e.preventDefault();
-    createBatch($("newBatchName").value);
+    saveBatch($("batchEditId").value, $("newBatchName").value);
   });
 
   $("batchesGrid").addEventListener("click", e => {
     const enterBtn = e.target.closest(".enter-batch-btn");
+    const editBtn = e.target.closest(".edit-batch-btn");
     const delBtn = e.target.closest(".batch-delete-btn");
 
     if (enterBtn) {
       selectBatch(enterBtn.dataset.id);
+      return;
+    }
+    if (editBtn) {
+      openEditBatchModal(editBtn.dataset.id, editBtn.dataset.name);
       return;
     }
     if (delBtn) {
@@ -1181,7 +1414,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Navigation
+  // Workspace Navigation
   document.querySelectorAll(".nav-button").forEach(btn => {
     btn.addEventListener("click", () => {
       showSection(btn.dataset.section);
@@ -1191,7 +1424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Daily Attendance Date Dropdowns
+  // Daily Attendance Controls
   $("dailyYearSelector").addEventListener("change", () => {
     populateDailyDays();
     renderDailyAttendance();
@@ -1201,6 +1434,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderDailyAttendance();
   });
   $("dailyDaySelector").addEventListener("change", renderDailyAttendance);
+  $("setTodayBtn").addEventListener("click", () => {
+    setDateSelectorsToToday();
+    renderDailyAttendance();
+  });
   $("studentSearch").addEventListener("input", renderDailyAttendance);
 
   $("dailyAttendanceBody").addEventListener("click", e => {
@@ -1252,7 +1489,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("reportYearSelector").addEventListener("change", renderStudentReport);
   $("reportMonthSelector").addEventListener("change", renderStudentReport);
 
-  // Users & Permissions
+  // Users, Password Reset & Batch Allocation
   $("addUserButton").addEventListener("click", openUserModal);
   $("closeUserModal").addEventListener("click", closeUserModal);
   $("cancelUserButton").addEventListener("click", closeUserModal);
@@ -1263,15 +1500,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   $("usersTableBody").addEventListener("click", e => {
     const allocBtn = e.target.closest(".allocate-btn");
+    const resetPwdBtn = e.target.closest(".reset-pwd-btn");
     const delBtn = e.target.closest(".delete-user-btn");
 
     if (allocBtn) {
       openAllocateModal(allocBtn.dataset.id, allocBtn.dataset.name);
       return;
     }
+    if (resetPwdBtn) {
+      openPasswordModal(resetPwdBtn.dataset.id, resetPwdBtn.dataset.name);
+      return;
+    }
     if (delBtn) {
       removeUser(delBtn.dataset.id);
     }
+  });
+
+  // Password Modal
+  $("closePasswordModal").addEventListener("click", closePasswordModal);
+  $("cancelPasswordButton").addEventListener("click", closePasswordModal);
+  $("passwordForm").addEventListener("submit", e => {
+    e.preventDefault();
+    handlePasswordReset();
   });
 
   // Allocate Modal
@@ -1286,17 +1536,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.addEventListener("click", e => {
     if (e.target === $("batchModal")) closeBatchModal();
     if (e.target === $("allocateModal")) closeAllocateModal();
+    if (e.target === $("passwordModal")) closePasswordModal();
     if (e.target === $("studentModal")) closeStudentModal();
     if (e.target === $("userModal")) closeUserModal();
   });
 
-  // Restore session
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session && session.user) {
-      await enterApp();
-    }
-  } catch (err) {
-    console.warn("Session restore check:", err);
-  }
+  // Auto-detect session on landing page load
+  await checkLandingSession();
 });

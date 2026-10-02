@@ -4,23 +4,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AMS — The One and Only Attendance Management System</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f2d59'/><text x='50' y='65' font-family='Arial, sans-serif' font-size='42' font-weight='bold' fill='%23ffffff' text-anchor='middle'>AMS</text></svg>">
+  <link rel="icon" type="image/png" href="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png">
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
   <!-- ========================================================
-       SCREEN 1: LOGIN & WELCOME PORTAL
+       SCREEN 1: HERO LANDING PAGE
        ======================================================== -->
-  <div id="loginScreen" class="login-screen">
+  <div id="landingScreen" class="landing-screen">
+    <canvas id="orbitCanvas" class="orbit-canvas"></canvas>
+
+    <header class="landing-nav">
+      <div class="landing-brand">
+        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Logo" class="brand-emblem-img">
+        <span class="brand-title-text">AMS</span>
+      </div>
+      <div class="clock-display" id="liveClockBadge">
+        <span class="live-dot"></span>
+        <span id="liveClockText">Loading Clock...</span>
+      </div>
+    </header>
+
+    <main class="landing-hero-content">
+      <div class="emblem-wrapper">
+        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Emblem" class="hero-emblem-glow">
+      </div>
+      <h1 class="hero-headline">AMS</h1>
+      <p class="hero-subline">The One and Only Attendance Management System</p>
+      <p class="hero-description">Enterprise Trainee Operations, Automated Register Analytics & Batch Tracking Portal</p>
+
+      <div class="landing-cta-cluster">
+        <!-- Dynamically swaps based on auth check -->
+        <button type="button" id="landingContinueBtn" class="cta-button primary-cta" style="display: none;">
+          Continue to Workspace →
+        </button>
+        <button type="button" id="landingLoginBtn" class="cta-button primary-cta">
+          Sign In to Portal
+        </button>
+      </div>
+    </main>
+
+    <footer class="landing-footer">
+      <div class="nkk-signature">Made by NKK</div>
+    </footer>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 2: LOGIN MODAL SCREEN
+       ======================================================== -->
+  <div id="loginScreen" class="login-screen" style="display: none;">
     <div class="login-card">
+      <button type="button" class="back-to-landing-btn" id="backToLandingFromLogin">← Back</button>
       <div class="brand-header">
-        <div class="app-logo">AMS</div>
-        <h1>AMS</h1>
-        <p class="hero-tagline">The One and Only Attendance Management System</p>
+        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Logo" class="login-emblem">
+        <h1>Sign In</h1>
+        <p class="hero-tagline">Attendance Management System</p>
       </div>
 
       <form id="loginForm">
@@ -50,17 +92,17 @@
         <p id="loginMessage" class="message" aria-live="polite"></p>
       </form>
 
-      <div class="brand-watermark">made by NKK</div>
+      <div class="brand-watermark">Made by NKK</div>
     </div>
   </div>
 
   <!-- ========================================================
-       SCREEN 2: BATCH SELECTION HUB (HOMEPAGE AFTER LOGIN)
+       SCREEN 3: BATCH SELECTION HUB
        ======================================================== -->
   <div id="batchHubScreen" class="hub-screen" style="display: none;">
     <header class="top-header">
       <div class="header-brand">
-        <div class="logo-mark">AMS</div>
+        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Emblem" class="nav-emblem">
         <div>
           <h1>AMS — The One and Only Attendance Management System</h1>
           <p>Batch Selection Hub</p>
@@ -78,8 +120,8 @@
     <main class="main-container">
       <div class="hub-hero">
         <div>
-          <h2>Select a Training Batch</h2>
-          <p id="hubSubtitle">Choose an assigned batch to manage attendance, records, and student rosters.</p>
+          <h2>Training Batches</h2>
+          <p id="hubSubtitle">Select a batch workspace to manage attendance records and student rosters.</p>
         </div>
         <div id="adminBatchControls" style="display: none;">
           <button type="button" id="createBatchBtn" class="primary-button">+ Add Batch</button>
@@ -88,17 +130,17 @@
 
       <div id="batchesGrid" class="batches-grid"></div>
 
-      <div class="footer-signature">made by NKK</div>
+      <div class="footer-signature">Made by NKK</div>
     </main>
   </div>
 
   <!-- ========================================================
-       SCREEN 3: MAIN WORKSPACE (INSIDE SELECTED BATCH)
+       SCREEN 4: MAIN WORKSPACE (INSIDE SELECTED BATCH)
        ======================================================== -->
   <div id="appScreen" class="app-screen" style="display: none;">
     <header class="top-header">
       <div class="header-brand">
-        <div class="logo-mark">AMS</div>
+        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Emblem" class="nav-emblem">
         <div>
           <h1 id="workspaceBatchTitle">Batch Attendance</h1>
           <p>The One and Only Attendance Management System</p>
@@ -125,7 +167,7 @@
           Register (Monthly / Yearly)
         </button>
         <button type="button" class="nav-button" data-section="studentsSection">
-          Students Roster
+          Students
         </button>
         <button type="button" class="nav-button" data-section="reportsSection">
           Student Report
@@ -170,6 +212,9 @@
             <div class="control-group">
               <label for="dailyDaySelector">Date</label>
               <select id="dailyDaySelector"></select>
+            </div>
+            <div class="control-group align-self-end">
+              <button type="button" id="setTodayBtn" class="secondary-button small">Today's Date</button>
             </div>
           </div>
 
@@ -277,7 +322,7 @@
       <section id="studentsSection" class="app-section">
         <div class="section-header">
           <div>
-            <h2>Students Roster</h2>
+            <h2>Students</h2>
             <p>Manage students enrolled in this batch.</p>
           </div>
           <button type="button" id="addStudentButton" class="primary-button">
@@ -351,7 +396,7 @@
         <div class="section-header">
           <div>
             <h2>Teachers & Admins</h2>
-            <p>Create staff accounts and allocate permitted batches.</p>
+            <p>Manage staff accounts, change passwords, and allocate permitted batches.</p>
           </div>
           <button type="button" id="addUserButton" class="primary-button">
             + Add Teacher / Admin
@@ -367,7 +412,7 @@
                 <th>Staff Name</th>
                 <th style="width: 120px;">Role</th>
                 <th>Allocated Batches</th>
-                <th style="width: 220px;">Actions</th>
+                <th style="width: 280px;">Actions</th>
               </tr>
             </thead>
             <tbody id="usersTableBody"></tbody>
@@ -375,28 +420,29 @@
         </div>
       </section>
 
-      <div class="footer-signature">made by NKK</div>
+      <div class="footer-signature">Made by NKK</div>
     </main>
   </div>
 
   <!-- ========================================================
        MODALS
        ======================================================== -->
-  <!-- MODAL: ADD BATCH -->
+  <!-- MODAL: ADD / EDIT BATCH -->
   <div id="batchModal" class="modal" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Create New Batch</h2>
+        <h2 id="batchModalTitle">Create New Batch</h2>
         <button type="button" id="closeBatchModal" class="close-button">&times;</button>
       </div>
       <form id="batchForm">
+        <input type="hidden" id="batchEditId">
         <div class="form-group">
           <label for="newBatchName">Batch Name</label>
-          <input type="text" id="newBatchName" placeholder="e.g. Batch 01 or 2026 Hetero Trainees" required>
+          <input type="text" id="newBatchName" placeholder="e.g. Batch 01 or Hetero Trainees 2026" required>
         </div>
         <div class="modal-actions">
           <button type="button" id="cancelBatchButton" class="secondary-button">Cancel</button>
-          <button type="submit" class="primary-button">Create Batch</button>
+          <button type="submit" class="primary-button">Save Batch</button>
         </div>
         <p id="batchFormMessage" class="message" aria-live="polite"></p>
       </form>
@@ -421,6 +467,28 @@
           <button type="submit" id="saveAllocateButton" class="primary-button">Save Allocation</button>
         </div>
         <p id="allocateFormMessage" class="message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: RESET PASSWORD (ADMIN FOR USER) -->
+  <div id="passwordModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="passwordModalTitle">Reset Password</h2>
+        <button type="button" id="closePasswordModal" class="close-button">&times;</button>
+      </div>
+      <form id="passwordForm">
+        <input type="hidden" id="passwordTargetUserId">
+        <div class="form-group">
+          <label for="newStaffPassword">New Password</label>
+          <input type="password" id="newStaffPassword" placeholder="Minimum 6 characters" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cancelPasswordButton" class="secondary-button">Cancel</button>
+          <button type="submit" id="savePasswordButton" class="primary-button">Update Password</button>
+        </div>
+        <p id="passwordFormMessage" class="message" aria-live="polite"></p>
       </form>
     </div>
   </div>
