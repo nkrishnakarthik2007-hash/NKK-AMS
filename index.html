@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMS — Attendance Management System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <h1>AMS</h1>
+      <p class="login-subtitle">Attendance Management System</p>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmployeeId">Employee ID or Email</label>
+          <input
+            type="text"
+            id="loginEmployeeId"
+            placeholder="e.g. 241536 or admin001"
+            autocomplete="username"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="Enter Password"
+            autocomplete="current-password"
+            required
+          >
+        </div>
+
+        <button type="submit" id="loginButton">Login</button>
+        <p id="loginMessage" class="message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN APPLICATION SCREEN -->
+  <div id="appScreen" class="app-screen" style="display: none;">
+    <!-- HEADER -->
+    <header class="top-header">
+      <div>
+        <h1>AMS — Attendance Management System</h1>
+        <p>Training Batch Attendance</p>
+      </div>
+
+      <div class="header-user">
+        <span id="loggedInUser">User</span>
+        <button type="button" id="logoutButton">Logout</button>
+      </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="main-container">
+      <!-- NAVIGATION TABS -->
+      <nav class="main-nav">
+        <button type="button" class="nav-button active" data-section="dailySection">
+          Daily Attendance
+        </button>
+        <button type="button" class="nav-button" data-section="monthlySection">
+          Monthly Register
+        </button>
+        <button type="button" class="nav-button" data-section="studentsSection">
+          Students
+        </button>
+        <button type="button" class="nav-button" data-section="reportsSection">
+          Reports
+        </button>
+        <button type="button" class="nav-button" id="usersNavTab" data-section="usersSection" style="display: none;">
+          Teachers & Admins
+        </button>
+      </nav>
+
+      <!-- SECTION 1: DAILY ATTENDANCE -->
+      <section id="dailySection" class="app-section active-section">
+        <div class="section-header">
+          <div>
+            <h2>Daily Attendance</h2>
+            <p>Select any date from the calendar to view or record attendance.</p>
+          </div>
+        </div>
+
+        <!-- CONTROLS -->
+        <div class="control-panel">
+          <div class="control-group">
+            <label for="attendanceDate">Select Date</label>
+            <input type="date" id="attendanceDate">
+          </div>
+          <div class="control-group search-control">
+            <label for="studentSearch">Search Student</label>
+            <input type="search" id="studentSearch" placeholder="Search by Employee ID or Name">
+          </div>
+        </div>
+
+        <!-- SUMMARY CARDS -->
+        <div class="summary-grid">
+          <div class="summary-card">
+            <span>Total Active</span>
+            <strong id="dailyTotal">0</strong>
+          </div>
+          <div class="summary-card present-summary">
+            <span>Present</span>
+            <strong id="dailyPresent">0</strong>
+          </div>
+          <div class="summary-card absent-summary">
+            <span>Absent</span>
+            <strong id="dailyAbsent">0</strong>
+          </div>
+          <div class="summary-card not-marked-summary">
+            <span>Not Marked</span>
+            <strong id="dailyNotMarked">0</strong>
+          </div>
+        </div>
+
+        <!-- ATTENDANCE TABLE WITH DEDICATED STATUS COLUMN -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60px;">S.No</th>
+                <th style="width: 140px;">Employee ID</th>
+                <th>Student Name</th>
+                <th style="width: 180px;">Mark Attendance</th>
+                <th style="width: 140px;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="dailyAttendanceBody"></tbody>
+          </table>
+        </div>
+
+        <div class="save-area">
+          <button type="button" id="saveAttendanceButton" class="primary-button">
+            Save Attendance
+          </button>
+          <span id="dailySaveMessage" class="message" aria-live="polite"></span>
+        </div>
+      </section>
+
+      <!-- SECTION 2: MONTHLY REGISTER -->
+      <section id="monthlySection" class="app-section">
+        <div class="section-header">
+          <div>
+            <h2>Monthly Register</h2>
+            <p>Comprehensive monthly view for the batch.</p>
+          </div>
+          <button type="button" id="copyMonthlyButton" class="secondary-button">
+            Copy for Excel
+          </button>
+        </div>
+
+        <div class="control-panel">
+          <div class="control-group">
+            <label for="monthlySelector">Select Month</label>
+            <input type="month" id="monthlySelector">
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table id="monthlyTable">
+            <thead id="monthlyTableHead"></thead>
+            <tbody id="monthlyTableBody"></tbody>
+          </table>
+        </div>
+
+        <p id="monthlyMessage" class="message" aria-live="polite"></p>
+      </section>
+
+      <!-- SECTION 3: STUDENT MANAGEMENT -->
+      <section id="studentsSection" class="app-section">
+        <div class="section-header">
+          <div>
+            <h2>Student Roster</h2>
+            <p>Manage student records and active batch enrolment.</p>
+          </div>
+          <button type="button" id="addStudentButton" class="primary-button">
+            + Add Student
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 60px;">S.No</th>
+                <th style="width: 140px;">Employee ID</th>
+                <th>Student Name</th>
+                <th style="width: 120px;">Enrolment</th>
+                <th style="width: 240px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECTION 4: REPORTS -->
+      <section id="reportsSection" class="app-section">
+        <div class="section-header">
+          <div>
+            <h2>Student Attendance Report</h2>
+            <p>Individual student monthly attendance record and percentage.</p>
+          </div>
+        </div>
+
+        <div class="control-panel">
+          <div class="control-group">
+            <label for="reportStudentSelector">Select Student</label>
+            <select id="reportStudentSelector">
+              <option value="">Select Student</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="reportMonthSelector">Select Month</label>
+            <input type="month" id="reportMonthSelector">
+          </div>
+        </div>
+
+        <div id="studentReport" class="report-area">
+          <p class="empty-message">Select a student and month to view report.</p>
+        </div>
+      </section>
+
+      <!-- SECTION 5: USER MANAGEMENT (ADMINS & TEACHERS) -->
+      <section id="usersSection" class="app-section">
+        <div class="section-header">
+          <div>
+            <h2>Teachers & Staff Management</h2>
+            <p>Add and manage teacher credentials for attendance recording.</p>
+          </div>
+          <button type="button" id="addUserButton" class="primary-button">
+            + Add Teacher / Admin
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Account Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: ADD / EDIT STUDENT -->
+  <div id="studentModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="studentModalTitle">Add Student</h2>
+        <button type="button" id="closeStudentModal" class="close-button">&times;</button>
+      </div>
+
+      <form id="studentForm">
+        <input type="hidden" id="studentEditId">
+        <div class="form-group">
+          <label for="studentEmployeeId">Employee ID</label>
+          <input type="text" id="studentEmployeeId" required placeholder="e.g. EMP001">
+        </div>
+        <div class="form-group">
+          <label for="studentName">Student Name</label>
+          <input type="text" id="studentName" required placeholder="Full Name">
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cancelStudentButton" class="secondary-button">Cancel</button>
+          <button type="submit" class="primary-button">Save Student</button>
+        </div>
+        <p id="studentFormMessage" class="message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD TEACHER / USER -->
+  <div id="userModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="userModalTitle">Add Teacher / Staff</h2>
+        <button type="button" id="closeUserModal" class="close-button">&times;</button>
+      </div>
+
+      <form id="userForm">
+        <div class="form-group">
+          <label for="userEmployeeId">Employee ID</label>
+          <input type="text" id="userEmployeeId" placeholder="e.g. TCH101 or 241536" required>
+        </div>
+        <div class="form-group">
+          <label for="userName">Full Name</label>
+          <input type="text" id="userName" placeholder="Teacher Name" required>
+        </div>
+        <div class="form-group">
+          <label for="userRole">Role</label>
+          <select id="userRole">
+            <option value="USER">Teacher (Staff User)</option>
+            <option value="ADMIN">Administrator</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="userPassword">Initial Password</label>
+          <input type="password" id="userPassword" placeholder="Minimum 6 characters" required>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cancelUserButton" class="secondary-button">Cancel</button>
+          <button type="submit" id="saveUserButton" class="primary-button">Create Account</button>
+        </div>
+        <p id="userFormMessage" class="message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</body>
+</html>
