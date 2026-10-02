@@ -1,6 +1,3 @@
-// Supabase Edge Function: admin-users
-// Securely manages user creation, updates, and deletions for administrators.
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -13,7 +10,6 @@ const corsHeaders = {
 const EMAIL_DOMAIN = "attendance.example.com";
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -27,7 +23,6 @@ serve(async (req) => {
       throw new Error("Missing Supabase configuration in environment variables.");
     }
 
-    // 1. Authenticate caller using their Bearer token
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
@@ -52,12 +47,10 @@ serve(async (req) => {
       });
     }
 
-    // 2. Initialize Admin client with service_role privileges
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Verify caller has active ADMIN privileges
     const { data: callerProfile, error: profileCheckError } = await adminClient
       .from("profiles")
       .select("role, active")
@@ -76,11 +69,9 @@ serve(async (req) => {
       );
     }
 
-    // 3. Process the requested action
     const body = await req.json().catch(() => ({}));
     const action = body.action || body.type;
 
-    // --- CREATE NEW USER ---
     if (action === "create" || action === "createUser") {
       const employeeId = (body.employee_id || body.employeeId || "").trim().toUpperCase();
       const name = (body.name || "").trim();
@@ -96,7 +87,6 @@ serve(async (req) => {
 
       const email = `${employeeId.toLowerCase()}@${EMAIL_DOMAIN}`;
 
-      // Create identity in Supabase Auth
       const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
         email,
         password,
@@ -106,7 +96,6 @@ serve(async (req) => {
 
       if (createError) throw createError;
 
-      // Upsert profile record
       const { error: profileError } = await adminClient.from("profiles").upsert(
         {
           id: newUser.user.id,
@@ -119,7 +108,6 @@ serve(async (req) => {
       );
 
       if (profileError) {
-        // Rollback created auth record if profile insertion fails
         await adminClient.auth.admin.deleteUser(newUser.user.id);
         throw profileError;
       }
@@ -130,7 +118,6 @@ serve(async (req) => {
       });
     }
 
-    // --- UPDATE / RESET PASSWORD ---
     if (action === "updateUser" || action === "resetPassword") {
       const targetUserId = body.userId || body.id;
       const newPassword = body.password;
@@ -154,7 +141,6 @@ serve(async (req) => {
       });
     }
 
-    // --- DELETE USER ---
     if (action === "delete" || action === "deleteUser") {
       const targetUserId = body.userId || body.id;
 
@@ -165,7 +151,6 @@ serve(async (req) => {
         });
       }
 
-      // Safeguard primary administrator
       const { data: targetProfile } = await adminClient
         .from("profiles")
         .select("employee_id")
@@ -179,11 +164,9 @@ serve(async (req) => {
         );
       }
 
-      // Clean up relations and profile
       await adminClient.from("teacher_batches").delete().eq("profile_id", targetUserId);
       await adminClient.from("profiles").delete().eq("id", targetUserId);
 
-      // Remove from auth schema
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(targetUserId);
       if (deleteError) throw deleteError;
 

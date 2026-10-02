@@ -1,6 +1,6 @@
 // ============================================================
 // AMS — ATTENDANCE MANAGEMENT SYSTEM
-// CONTROLLER (PORTAL, BATCHES, ATTENDANCE, EXCEL, USERS)
+// CONTROLLER (PERSISTENCE, BATCH WORKSPACES, STICKY TABLES)
 // ============================================================
 
 const EMAIL_DOMAIN = "attendance.example.com";
@@ -434,22 +434,38 @@ async function deleteBatch(batchId, batchName) {
 }
 
 // ------------------------------------------------------------
-// LOAD DATA FOR ACTIVE BATCH
+// LOAD DATA FOR ACTIVE BATCH (EXACT SCOPING)
 // ------------------------------------------------------------
 async function loadBatchWorkspaceData() {
   if (!currentBatch) return;
 
-  const [studRes, datesRes, attRes] = await Promise.all([
-    sb.from("students").select("*").eq("batch_id", currentBatch.id).order("employee_id", { ascending: true }),
+  // 1. Fetch students assigned to this batch
+  const { data: batchStudents, error: studErr } = await sb
+    .from("students")
+    .select("*")
+    .eq("batch_id", currentBatch.id)
+    .order("employee_id", { ascending: true });
+
+  if (studErr) throw studErr;
+  students = batchStudents || [];
+
+  if (students.length === 0) {
+    attendanceDates = [];
+    attendanceRecords = [];
+    return;
+  }
+
+  const studentIds = students.map(s => s.id);
+
+  // 2. Fetch all recorded attendance dates and marks for these batch students
+  const [datesRes, attRes] = await Promise.all([
     sb.from("attendance_dates").select("*").order("attendance_date", { ascending: true }),
-    sb.from("attendance").select("*")
+    sb.from("attendance").select("*").in("student_id", studentIds)
   ]);
 
-  if (studRes.error) throw studRes.error;
   if (datesRes.error) throw datesRes.error;
   if (attRes.error) throw attRes.error;
 
-  students = studRes.data || [];
   attendanceDates = datesRes.data || [];
   attendanceRecords = attRes.data || [];
 }
@@ -557,8 +573,11 @@ function updateDailySummary() {
 
 async function saveAttendance() {
   const selectedDate = getSelectedDailyDate();
+  const activeStudentIds = new Set(students.map(s => s.id));
+
   const records = attendanceRecords
-    .filter(r => r.attendance_date === selectedDate && (r.status === "Present" || r.status === "Absent"))
+    .filter(r => r.attendance_date === selectedDate && activeStudentIds.has(r.student_id))
+    .filter(r => r.status === "Present" || r.status === "Absent")
     .map(r => ({
       student_id: r.student_id,
       attendance_date: r.attendance_date,
@@ -572,16 +591,25 @@ async function saveAttendance() {
 
   const btn = $("saveAttendanceButton");
   btn.disabled = true;
-  btn.textContent = "Saving...";
+  btn.textContent = "Saving to Supabase...";
 
   try {
-    await sb.from("attendance_dates").upsert({ attendance_date: selectedDate }, { onConflict: "attendance_date" });
-    const { error } = await sb.from("attendance").upsert(records, { onConflict: "attendance_date,student_id" });
-    if (error) throw error;
+    const { error: dateErr } = await sb
+      .from("attendance_dates")
+      .upsert({ attendance_date: selectedDate }, { onConflict: "attendance_date" });
+    if (dateErr) throw dateErr;
+
+    const { error: attErr } = await sb
+      .from("attendance")
+      .upsert(records, { onConflict: "attendance_date,student_id" });
+    if (attErr) throw attErr;
 
     await loadBatchWorkspaceData();
     renderDailyAttendance();
-    showMessage("dailySaveMessage", `Attendance records saved for ${formatDateDisplay(selectedDate)}`, "success");
+    renderRegisterTable();
+    renderReportStudentSelector();
+
+    showMessage("dailySaveMessage", `Saved ${records.length} records for ${formatDateDisplay(selectedDate)}!`, "success");
   } catch (err) {
     console.error("Save error:", err);
     showMessage("dailySaveMessage", getReadableError(err), "error");
@@ -592,7 +620,7 @@ async function saveAttendance() {
 }
 
 // ------------------------------------------------------------
-// REGISTER & EXCEL EXPORT
+// REGISTER (HORIZONTAL SCROLL & STICKY COLUMNS)
 // ------------------------------------------------------------
 function getRegisterDates() {
   const mode = $("registerViewMode").value;
@@ -625,21 +653,22 @@ function renderRegisterTable() {
 
   const trHead = document.createElement("tr");
   trHead.innerHTML = `
-    <th>S.No</th>
-    <th>Employee ID</th>
-    <th>Student Name</th>
+    <th class="sticky-col col-sno">S.No</th>
+    <th class="sticky-col col-empid">Employee ID</th>
+    <th class="sticky-col col-name">Student Name</th>
   `;
 
   dates.forEach(d => {
     const th = document.createElement("th");
+    th.className = "date-col";
     th.textContent = formatDateDisplay(d);
     trHead.appendChild(th);
   });
 
   trHead.innerHTML += `
-    <th>Total Present</th>
-    <th>Total Absent</th>
-    <th>Attendance %</th>
+    <th class="stat-col">Total Present</th>
+    <th class="stat-col">Total Absent</th>
+    <th class="stat-col">Attendance %</th>
   `;
   head.appendChild(trHead);
 
@@ -654,9 +683,9 @@ function renderRegisterTable() {
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td><strong>${escapeHtml(s.employee_id)}</strong></td>
-      <td>${escapeHtml(s.name)} ${s.status === "LEFT" ? '<span style="color:#dc2626; font-size:11px;">(Left)</span>' : ""}</td>
+      <td class="sticky-col col-sno">${idx + 1}</td>
+      <td class="sticky-col col-empid"><strong>${escapeHtml(s.employee_id)}</strong></td>
+      <td class="sticky-col col-name">${escapeHtml(s.name)} ${s.status === "LEFT" ? '<span style="color:#dc2626; font-size:11px;">(Left)</span>' : ""}</td>
     `;
 
     dates.forEach(d => {
@@ -667,9 +696,10 @@ function renderRegisterTable() {
       if (status === "Absent") aCount++;
 
       const td = document.createElement("td");
+      td.className = "date-col";
       td.textContent = status;
-      if (status === "Present") td.className = "cell-present";
-      if (status === "Absent") td.className = "cell-absent";
+      if (status === "Present") td.classList.add("cell-present");
+      if (status === "Absent") td.classList.add("cell-absent");
       tr.appendChild(td);
     });
 
@@ -677,9 +707,9 @@ function renderRegisterTable() {
     const pct = total > 0 ? ((pCount / total) * 100).toFixed(1) : "0.0";
 
     tr.innerHTML += `
-      <td><strong>${pCount}</strong></td>
-      <td>${aCount}</td>
-      <td><strong>${pct}%</strong></td>
+      <td class="stat-col"><strong>${pCount}</strong></td>
+      <td class="stat-col">${aCount}</td>
+      <td class="stat-col"><strong>${pct}%</strong></td>
     `;
     body.appendChild(tr);
   });
@@ -916,7 +946,7 @@ function renderStudentReport() {
 }
 
 // ------------------------------------------------------------
-// USERS, PERMISSIONS & PASSWORD RESET
+// USERS & ALLOCATIONS
 // ------------------------------------------------------------
 async function loadUsersList() {
   const body = $("usersTableBody");
@@ -1279,21 +1309,17 @@ async function logout() {
 document.addEventListener("DOMContentLoaded", async () => {
   initLiveClock();
 
-  // Continue to workspace button
   $("landingContinueBtn").addEventListener("click", async () => {
     await enterApp();
   });
 
-  // Login Form
   $("loginForm").addEventListener("submit", e => {
     e.preventDefault();
     login($("loginEmployeeId").value, $("loginPassword").value);
   });
 
-  // Hub Navigation
   $("switchBatchBtn").addEventListener("click", openBatchHub);
 
-  // Batch Hub Actions
   $("createBatchBtn").addEventListener("click", openCreateBatchModal);
   $("closeBatchModal").addEventListener("click", closeBatchModal);
   $("cancelBatchButton").addEventListener("click", closeBatchModal);
@@ -1320,7 +1346,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Workspace Navigation
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       showSection(btn.dataset.section);
@@ -1330,7 +1355,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Daily Attendance Controls
   $("dailyYearSelector").addEventListener("change", () => {
     populateDailyDays();
     renderDailyAttendance();
@@ -1353,7 +1377,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   $("saveAttendanceButton").addEventListener("click", saveAttendance);
 
-  // Register
   $("registerViewMode").addEventListener("change", e => {
     $("registerMonthWrapper").style.display = e.target.value === "yearly" ? "none" : "block";
     renderRegisterTable();
@@ -1362,7 +1385,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("registerMonthSelector").addEventListener("change", renderRegisterTable);
   $("copyMonthlyButton").addEventListener("click", copyRegisterForExcel);
 
-  // Students
   $("addStudentButton").addEventListener("click", () => openStudentModal());
   $("closeStudentModal").addEventListener("click", closeStudentModal);
   $("cancelStudentButton").addEventListener("click", closeStudentModal);
@@ -1390,12 +1412,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Reports
   $("reportStudentSelector").addEventListener("change", renderStudentReport);
   $("reportYearSelector").addEventListener("change", renderStudentReport);
   $("reportMonthSelector").addEventListener("change", renderStudentReport);
 
-  // Users & Password Reset
   $("addUserButton").addEventListener("click", openUserModal);
   $("closeUserModal").addEventListener("click", closeUserModal);
   $("cancelUserButton").addEventListener("click", closeUserModal);
@@ -1422,7 +1442,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Password Modal
   $("closePasswordModal").addEventListener("click", closePasswordModal);
   $("cancelPasswordButton").addEventListener("click", closePasswordModal);
   $("passwordForm").addEventListener("submit", e => {
@@ -1430,7 +1449,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     handlePasswordReset();
   });
 
-  // Allocate Modal
   $("closeAllocateModal").addEventListener("click", closeAllocateModal);
   $("cancelAllocateButton").addEventListener("click", closeAllocateModal);
   $("allocateForm").addEventListener("submit", e => {
@@ -1438,7 +1456,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveBatchAllocation();
   });
 
-  // Modals click outside
   window.addEventListener("click", e => {
     if (e.target === $("batchModal")) closeBatchModal();
     if (e.target === $("allocateModal")) closeAllocateModal();

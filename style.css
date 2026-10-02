@@ -1,6 +1,6 @@
 /* ============================================================
    AMS — ATTENDANCE MANAGEMENT SYSTEM
-   CLEAN INSTITUTIONAL STYLES (WITH HORIZONTAL SCROLL & STICKY COLS)
+   CLEAN INSTITUTIONAL STYLES (WITH STICKY COLUMNS & SCROLLBAR)
    ============================================================ */
 
 :root {
@@ -30,7 +30,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* BRAND BADGE & TAGS */
 .brand-badge {
   display: inline-flex;
   align-items: center;
@@ -559,7 +558,6 @@ input:focus, select:focus {
   margin-bottom: 10px;
 }
 
-/* Visible styled scrollbar */
 .table-wrapper::-webkit-scrollbar {
   height: 10px;
 }
@@ -640,10 +638,9 @@ input:focus, select:focus {
 .excel-grid .col-name {
   left: 185px;
   min-width: 220px;
-  box-shadow: 3px 0 5px -2px rgba(0, 0, 0, 0.12); /* divider shadow */
+  box-shadow: 3px 0 5px -2px rgba(0, 0, 0, 0.12);
 }
 
-/* Date columns */
 .excel-grid th.date-col,
 .excel-grid td.date-col {
   min-width: 100px;
@@ -651,7 +648,6 @@ input:focus, select:focus {
   text-align: center;
 }
 
-/* Summary stats columns */
 .excel-grid th.stat-col,
 .excel-grid td.stat-col {
   min-width: 110px;
@@ -856,7 +852,6 @@ input:focus, select:focus {
   font-weight: 500;
 }
 
-/* RESPONSIVE */
 @media (max-width: 900px) {
   .summary-cards { grid-template-columns: repeat(2, 1fr); }
   .report-summary-grid { grid-template-columns: repeat(2, 1fr); }
