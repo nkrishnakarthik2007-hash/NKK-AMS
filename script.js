@@ -594,7 +594,7 @@ async function saveAttendance() {
   btn.textContent = "Saving to Supabase...";
 
   try {
-    // 1. Ensure the date is registered
+    // 1. Ensure the date is registered in attendance_dates
     const { error: dateErr } = await sb
       .from("attendance_dates")
       .upsert({ attendance_date: selectedDate }, { onConflict: "attendance_date" });
@@ -630,7 +630,7 @@ function getRegisterDates() {
   const year = $("registerYearSelector").value;
   const month = $("registerMonthSelector").value;
 
-  // Combine dates from attendance_dates table AND any recorded attendance marks
+  // Combine dates from attendance_dates table AND all recorded attendance rows for this batch
   const discoveredDates = new Set();
   
   attendanceDates.forEach(d => {
@@ -1406,7 +1406,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Students Controls
   $("addStudentButton").addEventListener("click", () => openStudentModal());
-  $("closeStudentModal").addEventListener("click", closeStudentModal);
+  $("closeStudentModal").addEventListener("closeStudentModal", closeStudentModal);
   $("cancelStudentButton").addEventListener("click", closeStudentModal);
   $("studentForm").addEventListener("submit", e => {
     e.preventDefault();

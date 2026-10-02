@@ -633,12 +633,12 @@ input:focus, select:focus {
 
 .excel-grid .col-empid {
   left: 55px;
-  width: 125px;
-  min-width: 125px;
+  width: 130px;
+  min-width: 130px;
 }
 
 .excel-grid .col-name {
-  left: 180px;
+  left: 185px;
   min-width: 220px;
   box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12); /* clean visual separator */
 }
