@@ -1,6 +1,6 @@
 /* ============================================================
    AMS — ATTENDANCE MANAGEMENT SYSTEM
-   CLEAN INSTITUTIONAL STYLES
+   CLEAN INSTITUTIONAL STYLES (WITH HORIZONTAL SCROLL & STICKY COLS)
    ============================================================ */
 
 :root {
@@ -191,6 +191,7 @@ input:focus, select:focus {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .btn-primary:hover {
@@ -448,6 +449,7 @@ input:focus, select:focus {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  gap: 12px;
 }
 
 .section-title-strip h2 {
@@ -542,24 +544,50 @@ input:focus, select:focus {
   color: var(--primary);
 }
 
-/* DATA TABLES */
+/* ============================================================
+   TABLE WRAPPER & HORIZONTAL SCROLLBAR
+   ============================================================ */
 .table-wrapper {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   background: #ffffff;
   border: 1px solid var(--border-light);
   border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 10px;
+}
+
+/* Visible styled scrollbar */
+.table-wrapper::-webkit-scrollbar {
+  height: 10px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 .data-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
 }
 
 .data-table th, .data-table td {
   padding: 10px 14px;
   border-bottom: 1px solid #f1f5f9;
-  text-align: left;
+  border-right: 1px solid #f8fafc;
+  text-align: center;
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -573,8 +601,62 @@ input:focus, select:focus {
   letter-spacing: 0.5px;
 }
 
-.data-table tbody tr:hover {
+.data-table tbody tr:hover td {
   background: #f8fafc;
+}
+
+/* STICKY COLUMNS FOR REGISTER & EXCEL GRIDS */
+.excel-grid th.sticky-col,
+.excel-grid td.sticky-col {
+  position: sticky;
+  background: #ffffff;
+  z-index: 2;
+  text-align: left;
+}
+
+.excel-grid th.sticky-col {
+  background: #f8fafc;
+  z-index: 3;
+}
+
+.excel-grid tbody tr:hover td.sticky-col {
+  background: #f1f5f9;
+}
+
+.excel-grid .col-sno {
+  left: 0;
+  width: 55px;
+  min-width: 55px;
+  max-width: 55px;
+  text-align: center !important;
+}
+
+.excel-grid .col-empid {
+  left: 55px;
+  width: 130px;
+  min-width: 130px;
+}
+
+.excel-grid .col-name {
+  left: 185px;
+  min-width: 220px;
+  box-shadow: 3px 0 5px -2px rgba(0, 0, 0, 0.12); /* divider shadow */
+}
+
+/* Date columns */
+.excel-grid th.date-col,
+.excel-grid td.date-col {
+  min-width: 100px;
+  max-width: 110px;
+  text-align: center;
+}
+
+/* Summary stats columns */
+.excel-grid th.stat-col,
+.excel-grid td.stat-col {
+  min-width: 110px;
+  text-align: center;
+  background: #fafafa;
 }
 
 /* ATTENDANCE BUTTONS & STATUS */
@@ -620,8 +702,8 @@ input:focus, select:focus {
 .pill-admin { background: #ede9fe; color: #6d28d9; }
 .pill-teacher { background: #e0e7ff; color: #4338ca; }
 
-.excel-grid td.cell-present { color: var(--green); font-weight: 600; }
-.excel-grid td.cell-absent { color: var(--red); font-weight: 600; }
+.excel-grid td.cell-present { color: var(--green); font-weight: 600; background: #f0fdf4; }
+.excel-grid td.cell-absent { color: var(--red); font-weight: 600; background: #fef2f2; }
 
 .action-footer {
   display: flex;
