@@ -1,21 +1,18 @@
 // ============================================================
 // AMS — ATTENDANCE MANAGEMENT SYSTEM
-// SCRIPT CONTROLLER
+// CORE LOGIC & EXCEL EXPORT CONTROLLER
 // ============================================================
 
 const EMAIL_DOMAIN = "attendance.example.com";
 
-// ------------------------------------------------------------
-// CONFIG VALIDATION
-// ------------------------------------------------------------
 if (typeof SUPABASE_URL === "undefined" || typeof SUPABASE_PUBLISHABLE_KEY === "undefined") {
   document.body.innerHTML = `
     <div style="padding:40px; font-family:Arial,sans-serif; color:#222;">
       <h2>Configuration Error</h2>
-      <p>config.js could not be loaded correctly.</p>
+      <p>config.js is missing or could not be loaded.</p>
     </div>
   `;
-  throw new Error("Supabase configuration is missing.");
+  throw new Error("Supabase configuration missing.");
 }
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -27,11 +24,11 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   }
 });
 
-// ------------------------------------------------------------
-// STATE
-// ------------------------------------------------------------
+// State
 let currentUser = null;
 let currentProfile = null;
+let batches = [];
+let selectedBatchId = null;
 let students = [];
 let attendanceDates = [];
 let attendanceRecords = [];
@@ -41,40 +38,28 @@ function $(id) {
 }
 
 function showMessage(elementId, message, type = "") {
-  const element = $(elementId);
-  if (!element) return;
-  element.textContent = message;
-  element.className = "message " + type;
+  const el = $(elementId);
+  if (!el) return;
+  el.textContent = message;
+  el.className = "message " + type;
 }
 
 function clearMessage(elementId) {
-  const element = $(elementId);
-  if (!element) return;
-  element.textContent = "";
-  element.className = "message";
+  const el = $(elementId);
+  if (!el) return;
+  el.textContent = "";
+  el.className = "message";
 }
 
-function formatDateDisplay(dateString) {
-  if (!dateString) return "";
-  const parts = dateString.split("-");
-  return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateString;
+function formatDateDisplay(dateStr) {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
 }
 
-function getTodayDate() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getCurrentMonth() {
-  return getTodayDate().slice(0, 7);
-}
-
-function escapeHtml(value) {
-  if (value === null || value === undefined) return "";
-  return String(value)
+function escapeHtml(val) {
+  if (val === null || val === undefined) return "";
+  return String(val)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -86,9 +71,59 @@ function getReadableError(error) {
   if (!error) return "An unexpected error occurred.";
   const msg = error.message || error.error_description || String(error);
   if (msg.includes("Invalid login credentials")) return "Invalid Employee ID / Email or password.";
-  if (msg.includes("No API key found")) return "Supabase publishable key not detected in config.js.";
-  if (msg.includes("Failed to fetch")) return "Unable to connect to Supabase server.";
+  if (msg.includes("No API key found")) return "Supabase publishable key is invalid or missing in config.js.";
+  if (msg.includes("Failed to fetch")) return "Network error connecting to Supabase.";
   return msg;
+}
+
+// ------------------------------------------------------------
+// DATE DROPDOWN GENERATORS
+// ------------------------------------------------------------
+function populateYearSelects() {
+  const years = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
+  const currentYear = new Date().getFullYear();
+
+  ["dailyYearSelector", "registerYearSelector", "reportYearSelector"].forEach(id => {
+    const sel = $(id);
+    if (!sel) return;
+    sel.innerHTML = "";
+    years.forEach(y => {
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.textContent = String(y);
+      if (y === currentYear) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+function populateDailyDays() {
+  const year = parseInt($("dailyYearSelector").value, 10);
+  const month = parseInt($("dailyMonthSelector").value, 10);
+  const daySel = $("dailyDaySelector");
+  if (!daySel) return;
+
+  const prevSelected = parseInt(daySel.value, 10) || new Date().getDate();
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  daySel.innerHTML = "";
+  for (let d = 1; d <= daysInMonth; d++) {
+    const opt = document.createElement("option");
+    const valStr = String(d).padStart(2, "0");
+    opt.value = valStr;
+    opt.textContent = valStr;
+    if (d === prevSelected || (d === daysInMonth && prevSelected > daysInMonth)) {
+      opt.selected = true;
+    }
+    daySel.appendChild(opt);
+  }
+}
+
+function getSelectedDailyDate() {
+  const y = $("dailyYearSelector").value;
+  const m = $("dailyMonthSelector").value;
+  const d = $("dailyDaySelector").value;
+  return `${y}-${m}-${d}`;
 }
 
 // ------------------------------------------------------------
@@ -98,15 +133,14 @@ async function login(credentialInput, password) {
   clearMessage("loginMessage");
   const input = credentialInput.trim();
   if (!input || !password) {
-    showMessage("loginMessage", "Please enter your ID and password.", "error");
+    showMessage("loginMessage", "Enter Employee ID/Email and password.", "error");
     return;
   }
 
   const email = input.includes("@") ? input.toLowerCase() : `${input.toLowerCase()}@${EMAIL_DOMAIN}`;
-
-  const loginBtn = $("loginButton");
-  loginBtn.disabled = true;
-  loginBtn.textContent = "Logging in...";
+  const btn = $("loginButton");
+  btn.disabled = true;
+  btn.textContent = "Authenticating...";
 
   try {
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
@@ -116,38 +150,37 @@ async function login(credentialInput, password) {
     currentUser = data.user;
     await enterApp();
   } catch (err) {
-    console.error("Login failure:", err);
+    console.error("Login failed:", err);
     showMessage("loginMessage", getReadableError(err), "error");
-    loginBtn.disabled = false;
-    loginBtn.textContent = "Login";
+    btn.disabled = false;
+    btn.textContent = "Sign In";
   }
 }
 
 async function enterApp() {
   try {
     const { data: { user }, error: userError } = await sb.auth.getUser();
-    if (userError || !user) throw userError || new Error("User session invalid.");
-
+    if (userError || !user) throw userError || new Error("Session invalid.");
     currentUser = user;
 
-    let { data: profile, error: profileErr } = await sb
+    let { data: profile, error: profErr } = await sb
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profileErr) throw profileErr;
+    if (profErr) throw profErr;
 
     if (!profile) {
       const emailPrefix = (user.email || "").split("@")[0].toUpperCase();
-      const isAdminID = ["241536", "ADMIN001"].includes(emailPrefix);
+      const isAdmin = ["241536", "ADMIN001"].includes(emailPrefix);
       const { data: newProf, error: insErr } = await sb
         .from("profiles")
         .insert({
           id: user.id,
           employee_id: emailPrefix || "241536",
           name: emailPrefix === "241536" ? "Super Admin" : "Administrator",
-          role: isAdminID ? "ADMIN" : "USER",
+          role: isAdmin ? "ADMIN" : "USER",
           active: true
         })
         .select()
@@ -157,15 +190,13 @@ async function enterApp() {
       profile = newProf;
     }
 
-    if (profile.active === false) {
+    if (!profile.active) {
       await sb.auth.signOut();
-      throw new Error("This account is currently marked inactive.");
+      throw new Error("This account is inactive.");
     }
 
     currentProfile = profile;
-
-    const displayName = profile.name || profile.employee_id || user.email;
-    $("loggedInUser").textContent = `${displayName} (${profile.role})`;
+    $("loggedInUser").textContent = `${profile.name || profile.employee_id} (${profile.role})`;
 
     if (profile.role === "ADMIN") {
       $("usersNavTab").style.display = "inline-block";
@@ -176,27 +207,83 @@ async function enterApp() {
     $("loginScreen").style.display = "none";
     $("appScreen").style.display = "block";
 
+    populateYearSelects();
+    const today = new Date();
+    $("dailyMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
+    $("registerMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
+    $("reportMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
+    populateDailyDays();
+    $("dailyDaySelector").value = String(today.getDate()).padStart(2, "0");
+
+    await loadBatches();
     await loadData();
-    setDefaultDates();
 
     renderDailyAttendance();
     renderStudents();
-    renderMonthlyRegister();
+    renderRegisterTable();
     renderReportStudentSelector();
 
-    if (profile.role === "ADMIN") {
-      loadUsersList();
-    }
+    if (profile.role === "ADMIN") loadUsersList();
   } catch (err) {
-    console.error("App initialization error:", err);
+    console.error("Startup error:", err);
     await sb.auth.signOut();
-    currentUser = null;
-    currentProfile = null;
     $("loginScreen").style.display = "flex";
     $("appScreen").style.display = "none";
     showMessage("loginMessage", getReadableError(err), "error");
     $("loginButton").disabled = false;
-    $("loginButton").textContent = "Login";
+    $("loginButton").textContent = "Sign In";
+  }
+}
+
+// ------------------------------------------------------------
+// BATCHES
+// ------------------------------------------------------------
+async function loadBatches() {
+  const { data, error } = await sb.from("batches").select("*").order("name", { ascending: true });
+  if (error) {
+    console.warn("Batches query notice:", error);
+    batches = [{ id: "default", name: "Default Batch" }];
+  } else {
+    batches = data && data.length > 0 ? data : [{ id: "default", name: "Default Batch" }];
+  }
+
+  const sel = $("globalBatchSelector");
+  sel.innerHTML = "";
+  batches.forEach(b => {
+    const opt = document.createElement("option");
+    opt.value = b.id;
+    opt.textContent = b.name;
+    sel.appendChild(opt);
+  });
+
+  if (!selectedBatchId || !batches.some(b => b.id === selectedBatchId)) {
+    selectedBatchId = batches[0].id;
+  }
+  sel.value = selectedBatchId;
+}
+
+async function createBatch(name) {
+  clearMessage("batchFormMessage");
+  const cleanName = name.trim();
+  if (!cleanName) {
+    showMessage("batchFormMessage", "Enter batch name.", "error");
+    return;
+  }
+
+  try {
+    const { data, error } = await sb.from("batches").insert({ name: cleanName }).select().single();
+    if (error) throw error;
+    await loadBatches();
+    selectedBatchId = data.id;
+    $("globalBatchSelector").value = selectedBatchId;
+    closeBatchModal();
+    await loadData();
+    renderDailyAttendance();
+    renderStudents();
+    renderRegisterTable();
+    renderReportStudentSelector();
+  } catch (err) {
+    showMessage("batchFormMessage", getReadableError(err), "error");
   }
 }
 
@@ -204,8 +291,13 @@ async function enterApp() {
 // LOAD DATA
 // ------------------------------------------------------------
 async function loadData() {
+  let studQuery = sb.from("students").select("*").order("employee_id", { ascending: true });
+  if (selectedBatchId && selectedBatchId !== "default") {
+    studQuery = studQuery.eq("batch_id", selectedBatchId);
+  }
+
   const [studRes, datesRes, attRes] = await Promise.all([
-    sb.from("students").select("*").order("employee_id", { ascending: true }),
+    studQuery,
     sb.from("attendance_dates").select("*").order("attendance_date", { ascending: true }),
     sb.from("attendance").select("*")
   ]);
@@ -219,38 +311,29 @@ async function loadData() {
   attendanceRecords = attRes.data || [];
 }
 
-function setDefaultDates() {
-  const today = getTodayDate();
-  if (!$("attendanceDate").value) $("attendanceDate").value = today;
-  if (!$("monthlySelector").value) $("monthlySelector").value = getCurrentMonth();
-  if (!$("reportMonthSelector").value) $("reportMonthSelector").value = getCurrentMonth();
-}
-
 // ------------------------------------------------------------
-// DAILY ATTENDANCE (DIRECT CALENDAR SELECTION)
+// DAILY ATTENDANCE
 // ------------------------------------------------------------
 function renderDailyAttendance() {
   const body = $("dailyAttendanceBody");
   if (!body) return;
 
   const search = $("studentSearch").value.trim().toLowerCase();
-  const selectedDate = $("attendanceDate").value;
+  const selectedDate = getSelectedDailyDate();
 
   body.innerHTML = "";
 
   const activeStudents = students.filter(s => s.status !== "LEFT");
-  const filtered = activeStudents.filter(student => {
+  const filtered = activeStudents.filter(s => {
     if (!search) return true;
-    const emp = String(student.employee_id || "").toLowerCase();
-    const name = String(student.name || "").toLowerCase();
-    return emp.includes(search) || name.includes(search);
+    return (s.employee_id || "").toLowerCase().includes(search) || (s.name || "").toLowerCase().includes(search);
   });
 
   if (filtered.length === 0) {
     body.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; color: #667085; padding: 24px;">
-          ${students.length === 0 ? "No students in batch. Add students in the Students tab." : "No matching students found."}
+        <td colspan="5" style="text-align:center; padding:24px; color:#64748b;">
+          ${students.length === 0 ? "No students in this batch. Add students in the Students tab." : "No matching students found."}
         </td>
       </tr>
     `;
@@ -258,31 +341,29 @@ function renderDailyAttendance() {
     return;
   }
 
-  filtered.forEach((student, index) => {
-    const existing = attendanceRecords.find(
-      r => r.student_id === student.id && r.attendance_date === selectedDate
-    );
+  filtered.forEach((s, idx) => {
+    const existing = attendanceRecords.find(r => r.student_id === s.id && r.attendance_date === selectedDate);
     const status = existing ? existing.status : "Not Marked";
 
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${index + 1}</td>
-      <td><strong>${escapeHtml(student.employee_id)}</strong></td>
-      <td>${escapeHtml(student.name)}</td>
+      <td>${idx + 1}</td>
+      <td><strong>${escapeHtml(s.employee_id)}</strong></td>
+      <td>${escapeHtml(s.name)}</td>
       <td>
         <div class="attendance-buttons">
           <button
             type="button"
-            class="attendance-button present-button ${status === "Present" ? "selected" : ""}"
-            data-student-id="${student.id}"
+            class="attendance-button present-btn ${status === "Present" ? "selected" : ""}"
+            data-student-id="${s.id}"
             data-status="Present"
           >
             Present
           </button>
           <button
             type="button"
-            class="attendance-button absent-button ${status === "Absent" ? "selected" : ""}"
-            data-student-id="${student.id}"
+            class="attendance-button absent-btn ${status === "Absent" ? "selected" : ""}"
+            data-student-id="${s.id}"
             data-status="Absent"
           >
             Absent
@@ -290,13 +371,7 @@ function renderDailyAttendance() {
         </div>
       </td>
       <td>
-        <span class="status-badge ${
-          status === "Present"
-            ? "status-present"
-            : status === "Absent"
-            ? "status-absent"
-            : "status-not-marked"
-        }">
+        <span class="status-badge ${status === "Present" ? "badge-present" : status === "Absent" ? "badge-absent" : "badge-notmarked"}">
           ${status}
         </span>
       </td>
@@ -308,29 +383,14 @@ function renderDailyAttendance() {
 }
 
 function handleAttendanceButton(studentId, status) {
-  const selectedDate = $("attendanceDate").value;
-  if (!selectedDate) {
-    showMessage("dailySaveMessage", "Please pick a date from the calendar.", "error");
-    return;
-  }
+  const selectedDate = getSelectedDailyDate();
+  const idx = attendanceRecords.findIndex(r => r.student_id === studentId && r.attendance_date === selectedDate);
+  const newRec = { student_id: studentId, attendance_date: selectedDate, status };
 
-  const existingIndex = attendanceRecords.findIndex(
-    r => r.student_id === studentId && r.attendance_date === selectedDate
-  );
-
-  const updatedRecord = {
-    student_id: studentId,
-    attendance_date: selectedDate,
-    status: status
-  };
-
-  if (existingIndex >= 0) {
-    attendanceRecords[existingIndex] = {
-      ...attendanceRecords[existingIndex],
-      ...updatedRecord
-    };
+  if (idx >= 0) {
+    attendanceRecords[idx] = { ...attendanceRecords[idx], ...newRec };
   } else {
-    attendanceRecords.push(updatedRecord);
+    attendanceRecords.push(newRec);
   }
 
   renderDailyAttendance();
@@ -338,18 +398,12 @@ function handleAttendanceButton(studentId, status) {
 }
 
 function updateDailySummary() {
-  const selectedDate = $("attendanceDate").value;
+  const selectedDate = getSelectedDailyDate();
   const activeStudents = students.filter(s => s.status !== "LEFT");
   const total = activeStudents.length;
 
-  const present = attendanceRecords.filter(
-    r => r.attendance_date === selectedDate && r.status === "Present"
-  ).length;
-
-  const absent = attendanceRecords.filter(
-    r => r.attendance_date === selectedDate && r.status === "Absent"
-  ).length;
-
+  const present = attendanceRecords.filter(r => r.attendance_date === selectedDate && r.status === "Present").length;
+  const absent = attendanceRecords.filter(r => r.attendance_date === selectedDate && r.status === "Absent").length;
   const notMarked = Math.max(0, total - present - absent);
 
   $("dailyTotal").textContent = total;
@@ -359,178 +413,205 @@ function updateDailySummary() {
 }
 
 async function saveAttendance() {
-  const selectedDate = $("attendanceDate").value;
-  if (!selectedDate) {
-    showMessage("dailySaveMessage", "Pick a date first.", "error");
-    return;
-  }
-
-  const recordsForDate = attendanceRecords
-    .filter(
-      r => r.attendance_date === selectedDate && (r.status === "Present" || r.status === "Absent")
-    )
+  const selectedDate = getSelectedDailyDate();
+  const records = attendanceRecords
+    .filter(r => r.attendance_date === selectedDate && (r.status === "Present" || r.status === "Absent"))
     .map(r => ({
       student_id: r.student_id,
       attendance_date: r.attendance_date,
       status: r.status
     }));
 
-  if (recordsForDate.length === 0) {
-    showMessage("dailySaveMessage", "Please mark at least one student Present or Absent.", "error");
+  if (records.length === 0) {
+    showMessage("dailySaveMessage", "Mark at least one student Present or Absent.", "error");
     return;
   }
 
-  const saveBtn = $("saveAttendanceButton");
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Saving...";
+  const btn = $("saveAttendanceButton");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
 
   try {
-    await sb
-      .from("attendance_dates")
-      .upsert({ attendance_date: selectedDate }, { onConflict: "attendance_date", ignoreDuplicates: true });
-
-    const { error } = await sb
-      .from("attendance")
-      .upsert(recordsForDate, { onConflict: "attendance_date,student_id" });
-
+    await sb.from("attendance_dates").upsert({ attendance_date: selectedDate }, { onConflict: "attendance_date" });
+    const { error } = await sb.from("attendance").upsert(records, { onConflict: "attendance_date,student_id" });
     if (error) throw error;
 
     await loadData();
     renderDailyAttendance();
-    showMessage("dailySaveMessage", "Attendance successfully saved for " + formatDateDisplay(selectedDate), "success");
+    showMessage("dailySaveMessage", `Attendance saved for ${formatDateDisplay(selectedDate)}`, "success");
   } catch (err) {
     console.error("Save error:", err);
     showMessage("dailySaveMessage", getReadableError(err), "error");
   } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Save Attendance";
+    btn.disabled = false;
+    btn.textContent = "Save Attendance";
   }
 }
 
 // ------------------------------------------------------------
-// MONTHLY REGISTER
+// REGISTER (MONTHLY / YEARLY) & COPY FOR EXCEL
 // ------------------------------------------------------------
-function renderMonthlyRegister() {
-  const month = $("monthlySelector").value;
+function getRegisterDates() {
+  const mode = $("registerViewMode").value;
+  const year = $("registerYearSelector").value;
+  const month = $("registerMonthSelector").value;
+
+  if (mode === "yearly") {
+    return attendanceDates
+      .filter(d => d.attendance_date.startsWith(`${year}-`))
+      .map(d => d.attendance_date)
+      .sort();
+  }
+
+  const prefix = `${year}-${month}`;
+  return attendanceDates
+    .filter(d => d.attendance_date.startsWith(prefix))
+    .map(d => d.attendance_date)
+    .sort();
+}
+
+function renderRegisterTable() {
   const head = $("monthlyTableHead");
   const body = $("monthlyTableBody");
   if (!head || !body) return;
 
   head.innerHTML = "";
   body.innerHTML = "";
-  if (!month) return;
 
-  const datesInMonth = attendanceDates
-    .filter(item => item.attendance_date.startsWith(month))
-    .map(item => item.attendance_date)
-    .sort();
+  const dates = getRegisterDates();
 
-  const headerRow = document.createElement("tr");
-  headerRow.innerHTML = `
+  const trHead = document.createElement("tr");
+  trHead.innerHTML = `
     <th>S.No</th>
     <th>Employee ID</th>
     <th>Student Name</th>
   `;
 
-  datesInMonth.forEach(date => {
+  dates.forEach(d => {
     const th = document.createElement("th");
-    th.textContent = formatDateDisplay(date).slice(0, 5);
-    headerRow.appendChild(th);
+    th.textContent = formatDateDisplay(d);
+    trHead.appendChild(th);
   });
 
-  headerRow.innerHTML += `
-    <th>Present</th>
-    <th>Absent</th>
-    <th>%</th>
+  trHead.innerHTML += `
+    <th>Total Present</th>
+    <th>Total Absent</th>
+    <th>Attendance %</th>
   `;
-  head.appendChild(headerRow);
+  head.appendChild(trHead);
 
-  students.forEach((student, index) => {
-    let presentCount = 0;
-    let absentCount = 0;
-
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${index + 1}</td>
-      <td><strong>${escapeHtml(student.employee_id)}</strong></td>
-      <td>${escapeHtml(student.name)} ${student.status === "LEFT" ? '<span style="color:#b33e3e; font-size:11px;">(Left)</span>' : ""}</td>
-    `;
-
-    datesInMonth.forEach(date => {
-      const record = attendanceRecords.find(
-        r => r.student_id === student.id && r.attendance_date === date
-      );
-      const status = record ? record.status : "-";
-      if (status === "Present") presentCount++;
-      if (status === "Absent") absentCount++;
-
-      const td = document.createElement("td");
-      td.textContent = status === "Present" ? "P" : status === "Absent" ? "A" : "-";
-      if (status === "Present") td.className = "status-present-pill";
-      if (status === "Absent") td.className = "status-absent-pill";
-      row.appendChild(td);
-    });
-
-    const totalMarked = presentCount + absentCount;
-    const percentage = totalMarked > 0 ? ((presentCount / totalMarked) * 100).toFixed(1) : "0.0";
-
-    row.innerHTML += `
-      <td><strong>${presentCount}</strong></td>
-      <td>${absentCount}</td>
-      <td><strong>${percentage}%</strong></td>
-    `;
-    body.appendChild(row);
-  });
-}
-
-async function copyMonthlyTable() {
-  const table = $("monthlyTable");
-  if (!table) return;
-
-  const rows = Array.from(table.querySelectorAll("tr"));
-  if (rows.length === 0) {
-    showMessage("monthlyMessage", "No register data available to copy.", "error");
+  if (students.length === 0) {
+    body.innerHTML = `<tr><td colspan="${dates.length + 6}" style="text-align:center; padding:20px; color:#64748b;">No students enrolled in this batch.</td></tr>`;
     return;
   }
 
-  const text = rows
-    .map(row => Array.from(row.querySelectorAll("th, td")).map(c => c.textContent.trim()).join("\t"))
-    .join("\n");
+  students.forEach((s, idx) => {
+    let pCount = 0;
+    let aCount = 0;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td><strong>${escapeHtml(s.employee_id)}</strong></td>
+      <td>${escapeHtml(s.name)} ${s.status === "LEFT" ? '<span style="color:#b33e3e; font-size:11px;">(Left)</span>' : ""}</td>
+    `;
+
+    dates.forEach(d => {
+      const rec = attendanceRecords.find(r => r.student_id === s.id && r.attendance_date === d);
+      const status = rec ? rec.status : "-";
+
+      if (status === "Present") pCount++;
+      if (status === "Absent") aCount++;
+
+      const td = document.createElement("td");
+      td.textContent = status;
+      if (status === "Present") td.className = "cell-present";
+      if (status === "Absent") td.className = "cell-absent";
+      tr.appendChild(td);
+    });
+
+    const total = pCount + aCount;
+    const pct = total > 0 ? ((pCount / total) * 100).toFixed(1) : "0.0";
+
+    tr.innerHTML += `
+      <td><strong>${pCount}</strong></td>
+      <td>${aCount}</td>
+      <td><strong>${pct}%</strong></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+async function copyRegisterForExcel() {
+  clearMessage("monthlyMessage");
+  const dates = getRegisterDates();
+
+  if (students.length === 0) {
+    showMessage("monthlyMessage", "No student data available to copy.", "error");
+    return;
+  }
+
+  const headers = ["S.No", "Employee ID", "Student Name", ...dates.map(d => formatDateDisplay(d)), "Total Present", "Total Absent", "Attendance %"];
+  const rows = [headers.join("\t")];
+
+  students.forEach((s, idx) => {
+    let pCount = 0;
+    let aCount = 0;
+
+    const row = [idx + 1, s.employee_id, s.name];
+
+    dates.forEach(d => {
+      const rec = attendanceRecords.find(r => r.student_id === s.id && r.attendance_date === d);
+      const status = rec ? rec.status : "-";
+      if (status === "Present") pCount++;
+      if (status === "Absent") aCount++;
+      row.push(status);
+    });
+
+    const total = pCount + aCount;
+    const pct = total > 0 ? `${((pCount / total) * 100).toFixed(1)}%` : "0.0%";
+
+    row.push(pCount, aCount, pct);
+    rows.push(row.join("\t"));
+  });
+
+  const tsvData = rows.join("\n");
 
   try {
-    await navigator.clipboard.writeText(text);
-    showMessage("monthlyMessage", "Monthly register copied. Paste directly into Microsoft Excel.", "success");
+    await navigator.clipboard.writeText(tsvData);
+    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates in DD-MM-YYYY format with exact Present/Absent statuses).", "success");
   } catch (err) {
-    showMessage("monthlyMessage", "Could not copy table automatically.", "error");
+    console.error("Clipboard failure:", err);
+    showMessage("monthlyMessage", "Could not copy automatically. Check browser clipboard permissions.", "error");
   }
 }
 
 // ------------------------------------------------------------
-// STUDENT MANAGEMENT
+// STUDENTS ROSTER
 // ------------------------------------------------------------
 function renderStudents() {
   const body = $("studentsTableBody");
   if (!body) return;
   body.innerHTML = "";
 
-  students.forEach((student, index) => {
-    const isLeft = student.status === "LEFT";
+  students.forEach((s, idx) => {
+    const isLeft = s.status === "LEFT";
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${index + 1}</td>
-      <td><strong>${escapeHtml(student.employee_id)}</strong></td>
-      <td>${escapeHtml(student.name)}</td>
+      <td>${idx + 1}</td>
+      <td><strong>${escapeHtml(s.employee_id)}</strong></td>
+      <td>${escapeHtml(s.name)}</td>
       <td>
-        <span class="status-badge ${isLeft ? "status-left" : "status-active"}">
+        <span class="status-badge ${isLeft ? "badge-left" : "badge-active"}">
           ${isLeft ? "Left / Inactive" : "Active"}
         </span>
       </td>
       <td>
-        <button type="button" class="small-button edit-student-btn" data-id="${student.id}">Edit</button>
-        <button type="button" class="small-button toggle-left-btn" data-id="${student.id}" data-current="${student.status || "ACTIVE"}">
+        <button type="button" class="small-button edit-student-btn" data-id="${s.id}">Edit</button>
+        <button type="button" class="small-button toggle-left-btn" data-id="${s.id}" data-current="${s.status || "ACTIVE"}">
           ${isLeft ? "Reactivate" : "Mark as Left"}
         </button>
-        <button type="button" class="small-button delete-student-btn danger" data-id="${student.id}">Delete</button>
+        <button type="button" class="small-button delete-student-btn danger" data-id="${s.id}">Delete</button>
       </td>
     `;
     body.appendChild(row);
@@ -551,7 +632,12 @@ async function saveStudent(employeeId, name, studentId = null) {
     if (studentId) {
       res = await sb.from("students").update({ employee_id: cleanId, name: cleanName }).eq("id", studentId);
     } else {
-      res = await sb.from("students").insert({ employee_id: cleanId, name: cleanName, status: "ACTIVE" });
+      res = await sb.from("students").insert({
+        employee_id: cleanId,
+        name: cleanName,
+        status: "ACTIVE",
+        batch_id: selectedBatchId !== "default" ? selectedBatchId : null
+      });
     }
 
     if (res.error) throw res.error;
@@ -559,7 +645,7 @@ async function saveStudent(employeeId, name, studentId = null) {
     await loadData();
     renderStudents();
     renderDailyAttendance();
-    renderMonthlyRegister();
+    renderRegisterTable();
     renderReportStudentSelector();
     closeStudentModal();
   } catch (err) {
@@ -584,9 +670,9 @@ async function toggleStudentLeft(studentId, currentStatus) {
 }
 
 async function deleteStudent(studentId) {
-  const student = students.find(s => s.id === studentId);
-  if (!student) return;
-  if (!confirm(`Permanently delete student ${student.name} (${student.employee_id})?`)) return;
+  const s = students.find(item => item.id === studentId);
+  if (!s) return;
+  if (!confirm(`Permanently delete student ${s.name} (${s.employee_id})?`)) return;
 
   try {
     const { error } = await sb.from("students").delete().eq("id", studentId);
@@ -594,7 +680,7 @@ async function deleteStudent(studentId) {
     await loadData();
     renderStudents();
     renderDailyAttendance();
-    renderMonthlyRegister();
+    renderRegisterTable();
     renderReportStudentSelector();
   } catch (err) {
     alert(getReadableError(err));
@@ -618,36 +704,40 @@ function renderReportStudentSelector() {
 
 function renderStudentReport() {
   const studentId = $("reportStudentSelector").value;
+  const year = $("reportYearSelector").value;
   const month = $("reportMonthSelector").value;
   const area = $("studentReport");
 
-  if (!studentId || !month) {
-    area.innerHTML = `<p class="empty-message">Select a student and month to view attendance history.</p>`;
+  if (!studentId) {
+    area.innerHTML = `<p class="empty-message">Select a student from the list.</p>`;
     return;
   }
 
   const student = students.find(s => String(s.id) === String(studentId));
   if (!student) return;
 
-  const datesInMonth = attendanceDates
-    .filter(item => item.attendance_date.startsWith(month))
-    .map(item => item.attendance_date)
+  const dates = attendanceDates
+    .map(d => d.attendance_date)
+    .filter(d => {
+      if (!d.startsWith(`${year}-`)) return false;
+      return month === "all" || d.startsWith(`${year}-${month}`);
+    })
     .sort();
 
-  let present = 0;
-  let absent = 0;
+  let p = 0;
+  let a = 0;
 
-  const rows = datesInMonth.map(date => {
-    const r = attendanceRecords.find(item => String(item.student_id) === String(studentId) && item.attendance_date === date);
-    const status = r ? r.status : "Not Marked";
-    if (status === "Present") present++;
-    if (status === "Absent") absent++;
+  const rows = dates.map(d => {
+    const rec = attendanceRecords.find(r => String(r.student_id) === String(studentId) && r.attendance_date === d);
+    const status = rec ? rec.status : "Not Marked";
+    if (status === "Present") p++;
+    if (status === "Absent") a++;
 
     return `
       <tr>
-        <td>${formatDateDisplay(date)}</td>
+        <td>${formatDateDisplay(d)}</td>
         <td>
-          <span class="status-badge ${status === "Present" ? "status-present" : status === "Absent" ? "status-absent" : "status-not-marked"}">
+          <span class="status-badge ${status === "Present" ? "badge-present" : status === "Absent" ? "badge-absent" : "badge-notmarked"}">
             ${status}
           </span>
         </td>
@@ -655,15 +745,15 @@ function renderStudentReport() {
     `;
   }).join("");
 
-  const total = present + absent;
-  const pct = total > 0 ? ((present / total) * 100).toFixed(1) : "0.0";
+  const total = p + a;
+  const pct = total > 0 ? ((p / total) * 100).toFixed(1) : "0.0";
 
   area.innerHTML = `
     <div class="report-summary">
       <div><strong>Student ID</strong><span>${escapeHtml(student.employee_id)}</span></div>
       <div><strong>Name</strong><span>${escapeHtml(student.name)}</span></div>
-      <div><strong>Present</strong><span>${present}</span></div>
-      <div><strong>Absent</strong><span>${absent}</span></div>
+      <div><strong>Present</strong><span>${p}</span></div>
+      <div><strong>Absent</strong><span>${a}</span></div>
       <div><strong>Attendance %</strong><span>${pct}%</span></div>
     </div>
     <div class="table-container">
@@ -675,7 +765,7 @@ function renderStudentReport() {
           </tr>
         </thead>
         <tbody>
-          ${rows || `<tr><td colspan="2">No dates recorded for this month.</td></tr>`}
+          ${rows || `<tr><td colspan="2">No dates recorded for this range.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -683,29 +773,29 @@ function renderStudentReport() {
 }
 
 // ------------------------------------------------------------
-// USER MANAGEMENT (TEACHERS & ADMINS)
+// TEACHERS & ADMINS MANAGEMENT
 // ------------------------------------------------------------
 async function loadUsersList() {
   const body = $("usersTableBody");
   if (!body) return;
-  body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px;">Loading accounts...</td></tr>`;
+  body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:16px;">Loading user accounts...</td></tr>`;
 
   try {
-    const { data: users, error } = await sb.from("profiles").select("*").order("created_at", { ascending: true });
+    const { data, error } = await sb.from("profiles").select("*").order("created_at", { ascending: true });
     if (error) throw error;
 
     body.innerHTML = "";
-    users.forEach((u, i) => {
+    data.forEach((u, i) => {
       const isSuper = u.employee_id === "241536";
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${i + 1}</td>
         <td><strong>${escapeHtml(u.employee_id)}</strong></td>
         <td>${escapeHtml(u.name)}</td>
-        <td><span class="status-badge ${u.role === "ADMIN" ? "status-admin" : "status-teacher"}">${u.role}</span></td>
+        <td><span class="status-badge ${u.role === "ADMIN" ? "badge-admin" : "badge-teacher"}">${u.role}</span></td>
         <td>${u.active ? "Active" : "Inactive"}</td>
         <td>
-          ${isSuper ? '<span style="color:#667085; font-size:12px;">Primary Admin</span>' : `
+          ${isSuper ? '<span style="color:#64748b; font-size:12px;">Primary Admin</span>' : `
             <button type="button" class="small-button delete-user-btn danger" data-id="${u.id}">Remove</button>
           `}
         </td>
@@ -713,41 +803,37 @@ async function loadUsersList() {
       body.appendChild(row);
     });
   } catch (err) {
-    console.error("Users list error:", err);
-    body.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Failed to load users: ${getReadableError(err)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Failed to load accounts: ${getReadableError(err)}</td></tr>`;
   }
 }
 
 async function createNewUser(employeeId, name, role, password) {
   clearMessage("userFormMessage");
-
-  const cleanEmployeeId = employeeId.trim().toUpperCase();
+  const cleanId = employeeId.trim().toUpperCase();
   const cleanName = name.trim();
 
-  if (!cleanEmployeeId || !cleanName) {
+  if (!cleanId || !cleanName) {
     showMessage("userFormMessage", "Enter Employee ID and Name.", "error");
     return;
   }
-
   if (!password || password.length < 6) {
-    showMessage("userFormMessage", "Password must be at least 6 characters long.", "error");
+    showMessage("userFormMessage", "Password must be at least 6 characters.", "error");
     return;
   }
 
-  const saveBtn = $("saveUserButton");
-  saveBtn.disabled = true;
-  saveBtn.textContent = "Creating...";
+  const btn = $("saveUserButton");
+  btn.disabled = true;
+  btn.textContent = "Creating...";
 
   try {
     const { data: { session } } = await sb.auth.getSession();
     const token = session ? session.access_token : "";
 
-    // Comprehensive payload compatible with action name variants: 'create', 'add', 'createUser'
     const payload = {
       action: "create",
       type: "create",
-      employee_id: cleanEmployeeId,
-      employeeId: cleanEmployeeId,
+      employee_id: cleanId,
+      employeeId: cleanId,
       name: cleanName,
       role: role,
       password: password
@@ -764,8 +850,6 @@ async function createNewUser(employeeId, name, role, password) {
     });
 
     let resData = await res.json().catch(() => ({}));
-
-    // If 'create' was not recognized, retry with 'createUser'
     if (!res.ok && resData.error && resData.error.includes("Unknown action")) {
       payload.action = "createUser";
       res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
@@ -780,34 +864,26 @@ async function createNewUser(employeeId, name, role, password) {
       resData = await res.json().catch(() => ({}));
     }
 
-    if (!res.ok || resData.error) {
-      throw new Error(resData.error || `Server responded with status ${res.status}`);
-    }
+    if (!res.ok || resData.error) throw new Error(resData.error || `Error ${res.status}`);
 
     closeUserModal();
     loadUsersList();
   } catch (err) {
-    console.error("Create user error:", err);
     showMessage("userFormMessage", getReadableError(err), "error");
   } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = "Create Account";
+    btn.disabled = false;
+    btn.textContent = "Create Account";
   }
 }
 
 async function removeUser(userId) {
-  if (!confirm("Are you sure you want to remove this user login?")) return;
+  if (!confirm("Are you sure you want to remove this user?")) return;
 
   try {
     const { data: { session } } = await sb.auth.getSession();
     const token = session ? session.access_token : "";
 
-    const payload = {
-      action: "delete",
-      userId: userId,
-      id: userId
-    };
-
+    const payload = { action: "delete", userId, id: userId };
     let res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
       method: "POST",
       headers: {
@@ -819,8 +895,6 @@ async function removeUser(userId) {
     });
 
     let resData = await res.json().catch(() => ({}));
-
-    // If 'delete' was not recognized, fallback to 'deleteUser'
     if (!res.ok && resData.error && resData.error.includes("Unknown action")) {
       payload.action = "deleteUser";
       res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
@@ -836,7 +910,6 @@ async function removeUser(userId) {
     }
 
     if (!res.ok || resData.error) throw new Error(resData.error || "Failed to delete user.");
-
     loadUsersList();
   } catch (err) {
     alert(getReadableError(err));
@@ -844,8 +917,19 @@ async function removeUser(userId) {
 }
 
 // ------------------------------------------------------------
-// MODAL CONTROLS
+// MODALS & NAVIGATION
 // ------------------------------------------------------------
+function openBatchModal() {
+  $("batchModal").style.display = "flex";
+  $("batchForm").reset();
+  clearMessage("batchFormMessage");
+  $("newBatchName").focus();
+}
+
+function closeBatchModal() {
+  $("batchModal").style.display = "none";
+}
+
 function openStudentModal(student = null) {
   $("studentModal").style.display = "flex";
   clearMessage("studentFormMessage");
@@ -896,7 +980,7 @@ async function logout() {
   try {
     await sb.auth.signOut();
   } catch (err) {
-    console.error("Logout error:", err);
+    console.error("SignOut error:", err);
   } finally {
     currentUser = null;
     currentProfile = null;
@@ -905,48 +989,81 @@ async function logout() {
     $("loginForm").reset();
     clearMessage("loginMessage");
     $("loginButton").disabled = false;
-    $("loginButton").textContent = "Login";
+    $("loginButton").textContent = "Sign In";
   }
 }
 
 // ------------------------------------------------------------
-// EVENT LISTENERS
+// INITIALIZATION
 // ------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", async () => {
+  // Login & Logout
   $("loginForm").addEventListener("submit", e => {
     e.preventDefault();
     login($("loginEmployeeId").value, $("loginPassword").value);
   });
-
   $("logoutButton").addEventListener("click", logout);
 
+  // Global Batch Change
+  $("globalBatchSelector").addEventListener("change", async e => {
+    selectedBatchId = e.target.value;
+    await loadData();
+    renderDailyAttendance();
+    renderStudents();
+    renderRegisterTable();
+    renderReportStudentSelector();
+  });
+
+  $("openBatchModalBtn").addEventListener("click", openBatchModal);
+  $("closeBatchModal").addEventListener("click", closeBatchModal);
+  $("cancelBatchButton").addEventListener("click", closeBatchModal);
+  $("batchForm").addEventListener("submit", e => {
+    e.preventDefault();
+    createBatch($("newBatchName").value);
+  });
+
+  // Navigation
   document.querySelectorAll(".nav-button").forEach(btn => {
     btn.addEventListener("click", () => {
       showSection(btn.dataset.section);
-      if (btn.dataset.section === "monthlySection") renderMonthlyRegister();
+      if (btn.dataset.section === "monthlySection") renderRegisterTable();
       if (btn.dataset.section === "reportsSection") renderStudentReport();
       if (btn.dataset.section === "usersSection") loadUsersList();
     });
   });
 
+  // Daily Attendance Date Dropdowns
+  $("dailyYearSelector").addEventListener("change", () => {
+    populateDailyDays();
+    renderDailyAttendance();
+  });
+  $("dailyMonthSelector").addEventListener("change", () => {
+    populateDailyDays();
+    renderDailyAttendance();
+  });
+  $("dailyDaySelector").addEventListener("change", renderDailyAttendance);
   $("studentSearch").addEventListener("input", renderDailyAttendance);
-  $("attendanceDate").addEventListener("change", renderDailyAttendance);
 
   $("dailyAttendanceBody").addEventListener("click", e => {
     const btn = e.target.closest(".attendance-button");
     if (!btn) return;
     handleAttendanceButton(btn.dataset.studentId, btn.dataset.status);
   });
-
   $("saveAttendanceButton").addEventListener("click", saveAttendance);
 
-  $("monthlySelector").addEventListener("change", renderMonthlyRegister);
-  $("copyMonthlyButton").addEventListener("click", copyMonthlyTable);
+  // Register (Monthly / Yearly)
+  $("registerViewMode").addEventListener("change", e => {
+    $("registerMonthWrapper").style.display = e.target.value === "yearly" ? "none" : "block";
+    renderRegisterTable();
+  });
+  $("registerYearSelector").addEventListener("change", renderRegisterTable);
+  $("registerMonthSelector").addEventListener("change", renderRegisterTable);
+  $("copyMonthlyButton").addEventListener("click", copyRegisterForExcel);
 
+  // Students
   $("addStudentButton").addEventListener("click", () => openStudentModal());
   $("closeStudentModal").addEventListener("click", closeStudentModal);
   $("cancelStudentButton").addEventListener("click", closeStudentModal);
-
   $("studentForm").addEventListener("submit", e => {
     e.preventDefault();
     saveStudent($("studentEmployeeId").value, $("studentName").value, $("studentEditId").value || null);
@@ -958,8 +1075,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const delBtn = e.target.closest(".delete-student-btn");
 
     if (editBtn) {
-      const student = students.find(s => String(s.id) === String(editBtn.dataset.id));
-      if (student) openStudentModal(student);
+      const s = students.find(item => String(item.id) === String(editBtn.dataset.id));
+      if (s) openStudentModal(s);
       return;
     }
     if (toggleBtn) {
@@ -971,21 +1088,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // Reports
   $("reportStudentSelector").addEventListener("change", renderStudentReport);
+  $("reportYearSelector").addEventListener("change", renderStudentReport);
   $("reportMonthSelector").addEventListener("change", renderStudentReport);
 
+  // Users
   $("addUserButton").addEventListener("click", openUserModal);
   $("closeUserModal").addEventListener("click", closeUserModal);
   $("cancelUserButton").addEventListener("click", closeUserModal);
-
   $("userForm").addEventListener("submit", e => {
     e.preventDefault();
-    createNewUser(
-      $("userEmployeeId").value,
-      $("userName").value,
-      $("userRole").value,
-      $("userPassword").value
-    );
+    createNewUser($("userEmployeeId").value, $("userName").value, $("userRole").value, $("userPassword").value);
   });
 
   $("usersTableBody").addEventListener("click", e => {
@@ -993,11 +1107,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (delBtn) removeUser(delBtn.dataset.id);
   });
 
+  // Modals click outside
   window.addEventListener("click", e => {
+    if (e.target === $("batchModal")) closeBatchModal();
     if (e.target === $("studentModal")) closeStudentModal();
     if (e.target === $("userModal")) closeUserModal();
   });
 
+  // Restore Session
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (session && session.user) {
