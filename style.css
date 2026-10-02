@@ -1,13 +1,13 @@
 /* ============================================================
-   AMS — ATTENDANCE MANAGEMENT SYSTEM
-   CORPORATE ENTERPRISE THEME (NAVY & SLATE)
+   AMS — THE ONE AND ONLY ATTENDANCE MANAGEMENT SYSTEM
+   PREMIUM CORPORATE THEME (NAVY, SLATE & GOLD TOUCHES)
    ============================================================ */
 
 :root {
   --primary-navy: #0f2d59;
   --primary-navy-dark: #091e3d;
   --accent-blue: #1d4ed8;
-  --bg-slate: #f8fafc;
+  --bg-slate: #f4f7fb;
   --surface-white: #ffffff;
   --border-subtle: #e2e8f0;
   --border-strong: #cbd5e1;
@@ -35,17 +35,40 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* BRANDING & LOGO */
-.brand-badge {
+/* BRAND WATERMARK */
+.brand-watermark {
+  font-family: 'Dancing Script', cursive;
+  font-size: 15px;
+  color: #94a3b8;
+  text-align: right;
+  margin-top: 24px;
+  opacity: 0.85;
+  user-select: none;
+  letter-spacing: 0.5px;
+}
+
+.footer-signature {
+  font-family: 'Dancing Script', cursive;
+  font-size: 16px;
+  color: #94a3b8;
+  text-align: center;
+  margin-top: 40px;
+  opacity: 0.75;
+  user-select: none;
+}
+
+/* LOGO MARK */
+.app-logo {
   display: inline-block;
-  padding: 4px 10px;
+  padding: 8px 18px;
   background: var(--primary-navy);
   color: #fff;
   font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 1px;
-  border-radius: 4px;
-  margin-bottom: 12px;
+  font-size: 22px;
+  letter-spacing: 1.5px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 12px rgba(15, 45, 89, 0.2);
 }
 
 .logo-mark {
@@ -53,7 +76,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #fff;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 17px;
   padding: 6px 12px;
   border-radius: 6px;
   letter-spacing: 0.8px;
@@ -66,30 +89,37 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  background: linear-gradient(135deg, #091e3d 0%, #0f2d59 50%, #1e3a8a 100%);
 }
 
-.login-box {
+.login-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   background: var(--surface-white);
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  padding: 36px;
-  box-shadow: 0 10px 30px rgba(15, 45, 89, 0.1);
+  border-radius: 12px;
+  padding: 40px 36px 28px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
 }
 
-.login-box h1 {
+.brand-header {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.brand-header h1 {
   margin: 0;
   color: var(--primary-navy);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
-.login-subtitle {
-  margin: 6px 0 24px;
+.hero-tagline {
+  margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 /* FORMS */
@@ -137,20 +167,8 @@ button:disabled {
   cursor: not-allowed;
 }
 
-#loginButton {
+.full-width {
   width: 100%;
-  min-height: 44px;
-  margin-top: 10px;
-  border: 0;
-  border-radius: 6px;
-  background: var(--primary-navy);
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-#loginButton:hover {
-  background: var(--primary-navy-dark);
 }
 
 .primary-button {
@@ -185,13 +203,13 @@ button:disabled {
 }
 
 .secondary-button.small {
-  min-height: 36px;
-  padding: 6px 12px;
+  min-height: 34px;
+  padding: 4px 12px;
   font-size: 12px;
 }
 
 .small-button {
-  min-height: 32px;
+  min-height: 30px;
   padding: 4px 10px;
   margin-right: 4px;
   border: 1px solid var(--border-strong);
@@ -235,7 +253,7 @@ button:disabled {
 
 .header-brand h1 {
   margin: 0;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -249,7 +267,7 @@ button:disabled {
 .header-user {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .user-pill {
@@ -271,12 +289,12 @@ button:disabled {
 }
 
 .logout-btn {
-  padding: 7px 14px;
+  padding: 6px 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
+  border-radius: 5px;
   background: transparent;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -288,37 +306,137 @@ button:disabled {
 .main-container {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 26px;
 }
 
-/* BATCH BAR */
-.batch-bar {
+/* BATCH HUB SCREEN */
+.hub-screen {
+  min-height: 100vh;
+  background: var(--bg-slate);
+}
+
+.hub-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 26px;
   background: #ffffff;
-  padding: 12px 20px;
+  padding: 24px 28px;
+  border-radius: 10px;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
-.batch-selector-group {
+.hub-hero h2 {
+  margin: 0;
+  color: var(--primary-navy);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.hub-hero p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.batches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
+}
+
+.batch-card {
+  background: var(--surface-white);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+}
+
+.batch-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(15, 45, 89, 0.08);
+  border-color: var(--border-strong);
+}
+
+.batch-card-top {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 
-.batch-selector-group label {
+.batch-icon {
+  font-size: 28px;
+}
+
+.batch-delete-btn {
+  background: transparent;
+  border: 0;
+  font-size: 18px;
+  color: #94a3b8;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.batch-delete-btn:hover {
+  color: var(--danger-red);
+  background: var(--danger-bg);
+}
+
+.batch-name {
   margin: 0;
+  color: var(--primary-navy);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.batch-sub {
+  margin: 6px 0 20px;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
-.batch-selector-group select {
-  min-height: 36px;
-  min-width: 220px;
-  padding: 4px 10px;
+.enter-batch-btn {
+  margin-top: auto;
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-slate);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--primary-navy);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.enter-batch-btn:hover {
+  background: var(--primary-navy);
+  color: #ffffff;
+  border-color: var(--primary-navy);
+}
+
+.empty-hub-card {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  background: #ffffff;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+}
+
+.empty-hub-card h3 {
+  margin: 0;
+  color: var(--primary-navy);
+}
+
+.empty-hub-card p {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 8px;
 }
 
 /* NAVIGATION TABS */
@@ -650,7 +768,7 @@ tbody tr:hover {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(2px);
 }
 
@@ -698,6 +816,40 @@ tbody tr:hover {
   margin-top: 24px;
 }
 
+/* CHECKBOX LIST (ALLOCATE BATCHES) */
+.checkbox-list {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.checkbox-item:hover {
+  background: #e2e8f0;
+}
+
+.checkbox-item input {
+  width: auto;
+  min-height: auto;
+}
+
+.checkbox-item span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
 /* RESPONSIVE */
 @media (max-width: 900px) {
   .summary-grid {
@@ -709,10 +861,10 @@ tbody tr:hover {
 }
 
 @media (max-width: 600px) {
-  .batch-bar {
+  .hub-hero {
     flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 14px;
   }
   .summary-grid {
     grid-template-columns: 1fr;

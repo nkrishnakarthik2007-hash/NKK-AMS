@@ -3,17 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AMS — Attendance Management System</title>
+  <title>AMS — The One and Only Attendance Management System</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f2d59'/><text x='50' y='65' font-family='Arial, sans-serif' font-size='42' font-weight='bold' fill='%23ffffff' text-anchor='middle'>AMS</text></svg>">
   <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <!-- LOGIN SCREEN -->
+  <!-- ========================================================
+       SCREEN 1: LOGIN & WELCOME PORTAL
+       ======================================================== -->
   <div id="loginScreen" class="login-screen">
-    <div class="login-box">
-      <div class="brand-badge">AMS</div>
-      <h1>Sign In</h1>
-      <p class="login-subtitle">Attendance Management System</p>
+    <div class="login-card">
+      <div class="brand-header">
+        <div class="app-logo">AMS</div>
+        <h1>AMS</h1>
+        <p class="hero-tagline">The One and Only Attendance Management System</p>
+      </div>
 
       <form id="loginForm">
         <div class="form-group">
@@ -21,7 +29,7 @@
           <input
             type="text"
             id="loginEmployeeId"
-            placeholder="e.g. 241536 or admin001"
+            placeholder="e.g. 241536 or TCH101"
             autocomplete="username"
             required
           >
@@ -38,46 +46,76 @@
           >
         </div>
 
-        <button type="submit" id="loginButton">Sign In</button>
+        <button type="submit" id="loginButton" class="primary-button full-width">Sign In</button>
         <p id="loginMessage" class="message" aria-live="polite"></p>
       </form>
+
+      <div class="brand-watermark">made by NKK</div>
     </div>
   </div>
 
-  <!-- MAIN APPLICATION SCREEN -->
-  <div id="appScreen" class="app-screen" style="display: none;">
-    <!-- HEADER -->
+  <!-- ========================================================
+       SCREEN 2: BATCH SELECTION HUB (HOMEPAGE AFTER LOGIN)
+       ======================================================== -->
+  <div id="batchHubScreen" class="hub-screen" style="display: none;">
     <header class="top-header">
       <div class="header-brand">
         <div class="logo-mark">AMS</div>
         <div>
-          <h1>Attendance Management System</h1>
-          <p>Enterprise Batch Operations & Reporting</p>
+          <h1>AMS — The One and Only Attendance Management System</h1>
+          <p>Batch Selection Hub</p>
+        </div>
+      </div>
+      <div class="header-user">
+        <div class="user-pill">
+          <span class="user-indicator"></span>
+          <span id="hubLoggedInUser">User</span>
+        </div>
+        <button type="button" class="logout-btn" onclick="logout()">Log Out</button>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <div class="hub-hero">
+        <div>
+          <h2>Select a Training Batch</h2>
+          <p id="hubSubtitle">Choose an assigned batch to manage attendance, records, and student rosters.</p>
+        </div>
+        <div id="adminBatchControls" style="display: none;">
+          <button type="button" id="createBatchBtn" class="primary-button">+ Add Batch</button>
+        </div>
+      </div>
+
+      <div id="batchesGrid" class="batches-grid"></div>
+
+      <div class="footer-signature">made by NKK</div>
+    </main>
+  </div>
+
+  <!-- ========================================================
+       SCREEN 3: MAIN WORKSPACE (INSIDE SELECTED BATCH)
+       ======================================================== -->
+  <div id="appScreen" class="app-screen" style="display: none;">
+    <header class="top-header">
+      <div class="header-brand">
+        <div class="logo-mark">AMS</div>
+        <div>
+          <h1 id="workspaceBatchTitle">Batch Attendance</h1>
+          <p>The One and Only Attendance Management System</p>
         </div>
       </div>
 
       <div class="header-user">
+        <button type="button" id="switchBatchBtn" class="secondary-button small">⇄ Switch Batch</button>
         <div class="user-pill">
           <span class="user-indicator"></span>
           <span id="loggedInUser">User</span>
         </div>
-        <button type="button" id="logoutButton" class="logout-btn">Log Out</button>
+        <button type="button" class="logout-btn" onclick="logout()">Log Out</button>
       </div>
     </header>
 
-    <!-- MAIN CONTAINER -->
     <main class="main-container">
-      <!-- GLOBAL BATCH SELECTION BAR -->
-      <section class="batch-bar">
-        <div class="batch-selector-group">
-          <label for="globalBatchSelector">Active Batch</label>
-          <select id="globalBatchSelector">
-            <option value="">Select Batch</option>
-          </select>
-        </div>
-        <button type="button" id="openBatchModalBtn" class="secondary-button small">+ New Batch</button>
-      </section>
-
       <!-- NAVIGATION TABS -->
       <nav class="main-nav">
         <button type="button" class="nav-button active" data-section="dailySection">
@@ -102,11 +140,10 @@
         <div class="section-header">
           <div>
             <h2>Daily Attendance</h2>
-            <p>Select Year, Month, and Date to view or mark attendance for the batch.</p>
+            <p>Select Year, Month, and Date to view or mark attendance for this batch.</p>
           </div>
         </div>
 
-        <!-- DATE PICKER DROPDOWNS -->
         <div class="control-panel">
           <div class="date-dropdown-cluster">
             <div class="control-group">
@@ -142,7 +179,6 @@
           </div>
         </div>
 
-        <!-- SUMMARY CARDS -->
         <div class="summary-grid">
           <div class="summary-card">
             <span>Total Enrolled</span>
@@ -162,7 +198,6 @@
           </div>
         </div>
 
-        <!-- ATTENDANCE TABLE -->
         <div class="table-container">
           <table>
             <thead>
@@ -171,7 +206,7 @@
                 <th style="width: 140px;">Employee ID</th>
                 <th>Student Name</th>
                 <th style="width: 200px;">Mark Status</th>
-                <th style="width: 130px;">Current Status</th>
+                <th style="width: 140px;">Current Status</th>
               </tr>
             </thead>
             <tbody id="dailyAttendanceBody"></tbody>
@@ -186,21 +221,18 @@
         </div>
       </section>
 
-      <!-- SECTION 2: REGISTER (MONTHLY / YEARLY) -->
+      <!-- SECTION 2: REGISTER -->
       <section id="monthlySection" class="app-section">
         <div class="section-header">
           <div>
             <h2>Attendance Register</h2>
             <p>Export attendance grids formatted with dates (DD-MM-YYYY) and exact Present/Absent values.</p>
           </div>
-          <div class="action-buttons">
-            <button type="button" id="copyMonthlyButton" class="primary-button">
-              Copy for Excel
-            </button>
-          </div>
+          <button type="button" id="copyMonthlyButton" class="primary-button">
+            Copy for Excel
+          </button>
         </div>
 
-        <!-- REGISTER FILTERS -->
         <div class="control-panel">
           <div class="control-group">
             <label for="registerViewMode">View Range</label>
@@ -209,12 +241,10 @@
               <option value="yearly">Full Year View</option>
             </select>
           </div>
-
           <div class="control-group">
             <label for="registerYearSelector">Year</label>
             <select id="registerYearSelector"></select>
           </div>
-
           <div class="control-group" id="registerMonthWrapper">
             <label for="registerMonthSelector">Month</label>
             <select id="registerMonthSelector">
@@ -240,7 +270,6 @@
             <tbody id="monthlyTableBody"></tbody>
           </table>
         </div>
-
         <p id="monthlyMessage" class="message" aria-live="polite"></p>
       </section>
 
@@ -249,7 +278,7 @@
         <div class="section-header">
           <div>
             <h2>Students Roster</h2>
-            <p>Manage students belonging to the selected batch.</p>
+            <p>Manage students enrolled in this batch.</p>
           </div>
           <button type="button" id="addStudentButton" class="primary-button">
             + Add Student
@@ -277,7 +306,7 @@
         <div class="section-header">
           <div>
             <h2>Individual Student Report</h2>
-            <p>Detailed performance report and date-wise status log.</p>
+            <p>Comprehensive date-wise status log and attendance percentages.</p>
           </div>
         </div>
 
@@ -313,16 +342,16 @@
         </div>
 
         <div id="studentReport" class="report-area">
-          <p class="empty-message">Select a student and date range to view attendance details.</p>
+          <p class="empty-message">Select a student and date range to view report.</p>
         </div>
       </section>
 
-      <!-- SECTION 5: USERS & TEACHERS -->
+      <!-- SECTION 5: USERS & PERMISSIONS -->
       <section id="usersSection" class="app-section">
         <div class="section-header">
           <div>
             <h2>Teachers & Admins</h2>
-            <p>Provision and authorize instructor accounts.</p>
+            <p>Create staff accounts and allocate permitted batches.</p>
           </div>
           <button type="button" id="addUserButton" class="primary-button">
             + Add Teacher / Admin
@@ -337,18 +366,23 @@
                 <th style="width: 140px;">Employee ID</th>
                 <th>Staff Name</th>
                 <th style="width: 120px;">Role</th>
-                <th style="width: 120px;">Status</th>
-                <th style="width: 120px;">Actions</th>
+                <th>Allocated Batches</th>
+                <th style="width: 220px;">Actions</th>
               </tr>
             </thead>
             <tbody id="usersTableBody"></tbody>
           </table>
         </div>
       </section>
+
+      <div class="footer-signature">made by NKK</div>
     </main>
   </div>
 
-  <!-- MODAL: BATCH MANAGEMENT -->
+  <!-- ========================================================
+       MODALS
+       ======================================================== -->
+  <!-- MODAL: ADD BATCH -->
   <div id="batchModal" class="modal" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
@@ -358,13 +392,35 @@
       <form id="batchForm">
         <div class="form-group">
           <label for="newBatchName">Batch Name</label>
-          <input type="text" id="newBatchName" placeholder="e.g. 2026 Hetero Trainees" required>
+          <input type="text" id="newBatchName" placeholder="e.g. Batch 01 or 2026 Hetero Trainees" required>
         </div>
         <div class="modal-actions">
           <button type="button" id="cancelBatchButton" class="secondary-button">Cancel</button>
           <button type="submit" class="primary-button">Create Batch</button>
         </div>
         <p id="batchFormMessage" class="message" aria-live="polite"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ALLOCATE BATCHES TO TEACHER -->
+  <div id="allocateModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="allocateModalTitle">Allocate Batches</h2>
+        <button type="button" id="closeAllocateModal" class="close-button">&times;</button>
+      </div>
+      <p style="font-size: 13px; color: #64748b; margin-top: -10px; margin-bottom: 16px;">
+        Select the batches this teacher is allowed to access:
+      </p>
+      <form id="allocateForm">
+        <input type="hidden" id="allocateProfileId">
+        <div id="allocateBatchCheckboxes" class="checkbox-list"></div>
+        <div class="modal-actions">
+          <button type="button" id="cancelAllocateButton" class="secondary-button">Cancel</button>
+          <button type="submit" id="saveAllocateButton" class="primary-button">Save Allocation</button>
+        </div>
+        <p id="allocateFormMessage" class="message" aria-live="polite"></p>
       </form>
     </div>
   </div>
@@ -431,7 +487,7 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT LIBRARIES -->
+  <!-- SCRIPTS -->
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>

@@ -1,6 +1,6 @@
 // ============================================================
-// AMS — ATTENDANCE MANAGEMENT SYSTEM
-// CORE LOGIC & EXCEL EXPORT CONTROLLER
+// AMS — THE ONE AND ONLY ATTENDANCE MANAGEMENT SYSTEM
+// CONTROLLER: BATCH HUB, ALLOCATION & PERMISSIONS
 // ============================================================
 
 const EMAIL_DOMAIN = "attendance.example.com";
@@ -27,8 +27,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 // State
 let currentUser = null;
 let currentProfile = null;
-let batches = [];
-let selectedBatchId = null;
+let allBatches = [];
+let permittedBatches = [];
+let currentBatch = null;
+
 let students = [];
 let attendanceDates = [];
 let attendanceRecords = [];
@@ -71,7 +73,7 @@ function getReadableError(error) {
   if (!error) return "An unexpected error occurred.";
   const msg = error.message || error.error_description || String(error);
   if (msg.includes("Invalid login credentials")) return "Invalid Employee ID / Email or password.";
-  if (msg.includes("No API key found")) return "Supabase publishable key is invalid or missing in config.js.";
+  if (msg.includes("No API key found")) return "Supabase publishable key is missing in config.js.";
   if (msg.includes("Failed to fetch")) return "Network error connecting to Supabase.";
   return msg;
 }
@@ -196,16 +198,18 @@ async function enterApp() {
     }
 
     currentProfile = profile;
-    $("loggedInUser").textContent = `${profile.name || profile.employee_id} (${profile.role})`;
+    const userDisplay = `${profile.name || profile.employee_id} (${profile.role})`;
+    $("loggedInUser").textContent = userDisplay;
+    $("hubLoggedInUser").textContent = userDisplay;
 
+    // Show/hide Admin Navigation
     if (profile.role === "ADMIN") {
       $("usersNavTab").style.display = "inline-block";
+      $("adminBatchControls").style.display = "block";
     } else {
       $("usersNavTab").style.display = "none";
+      $("adminBatchControls").style.display = "none";
     }
-
-    $("loginScreen").style.display = "none";
-    $("appScreen").style.display = "block";
 
     populateYearSelects();
     const today = new Date();
@@ -215,19 +219,12 @@ async function enterApp() {
     populateDailyDays();
     $("dailyDaySelector").value = String(today.getDate()).padStart(2, "0");
 
-    await loadBatches();
-    await loadData();
-
-    renderDailyAttendance();
-    renderStudents();
-    renderRegisterTable();
-    renderReportStudentSelector();
-
-    if (profile.role === "ADMIN") loadUsersList();
+    await openBatchHub();
   } catch (err) {
     console.error("Startup error:", err);
     await sb.auth.signOut();
     $("loginScreen").style.display = "flex";
+    $("batchHubScreen").style.display = "none";
     $("appScreen").style.display = "none";
     showMessage("loginMessage", getReadableError(err), "error");
     $("loginButton").disabled = false;
@@ -236,30 +233,86 @@ async function enterApp() {
 }
 
 // ------------------------------------------------------------
-// BATCHES
+// BATCH HUB & PERMISSIONS
 // ------------------------------------------------------------
-async function loadBatches() {
-  const { data, error } = await sb.from("batches").select("*").order("name", { ascending: true });
-  if (error) {
-    console.warn("Batches query notice:", error);
-    batches = [{ id: "default", name: "Default Batch" }];
+async function openBatchHub() {
+  $("loginScreen").style.display = "none";
+  $("appScreen").style.display = "none";
+  $("batchHubScreen").style.display = "block";
+
+  // Load all batches
+  const { data: bData } = await sb.from("batches").select("*").order("name", { ascending: true });
+  allBatches = bData || [];
+
+  if (currentProfile.role === "ADMIN") {
+    // Admins see all batches
+    permittedBatches = allBatches;
+    $("hubSubtitle").textContent = "Admin Portal: Select any batch to record attendance, manage rosters, or allocate batches to staff.";
   } else {
-    batches = data && data.length > 0 ? data : [{ id: "default", name: "Default Batch" }];
+    // Teachers only see allocated batches
+    const { data: allocData } = await sb
+      .from("teacher_batches")
+      .select("batch_id")
+      .eq("profile_id", currentProfile.id);
+
+    const allowedIds = new Set((allocData || []).map(a => a.batch_id));
+    permittedBatches = allBatches.filter(b => allowedIds.has(b.id));
+    $("hubSubtitle").textContent = "Teacher Workspace: Select your allocated batch to mark and manage daily attendance.";
   }
 
-  const sel = $("globalBatchSelector");
-  sel.innerHTML = "";
-  batches.forEach(b => {
-    const opt = document.createElement("option");
-    opt.value = b.id;
-    opt.textContent = b.name;
-    sel.appendChild(opt);
+  renderBatchesGrid();
+}
+
+function renderBatchesGrid() {
+  const grid = $("batchesGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  if (permittedBatches.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-hub-card">
+        <h3>No Batches Allocated</h3>
+        <p>You have not been assigned to any training batches yet. Please contact the administrator.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const isSuperAdmin = currentProfile.role === "ADMIN";
+
+  permittedBatches.forEach(b => {
+    const card = document.createElement("div");
+    card.className = "batch-card";
+    card.innerHTML = `
+      <div class="batch-card-top">
+        <span class="batch-icon">📚</span>
+        ${isSuperAdmin ? `<button type="button" class="batch-delete-btn" title="Delete Batch" data-id="${b.id}" data-name="${escapeHtml(b.name)}">🗑</button>` : ""}
+      </div>
+      <h3 class="batch-name">${escapeHtml(b.name)}</h3>
+      <p class="batch-sub">Training Batch Workspace</p>
+      <button type="button" class="enter-batch-btn" data-id="${b.id}">Open Batch →</button>
+    `;
+    grid.appendChild(card);
   });
+}
 
-  if (!selectedBatchId || !batches.some(b => b.id === selectedBatchId)) {
-    selectedBatchId = batches[0].id;
-  }
-  sel.value = selectedBatchId;
+async function selectBatch(batchId) {
+  const b = allBatches.find(item => item.id === batchId);
+  if (!b) return;
+  currentBatch = b;
+
+  $("workspaceBatchTitle").textContent = `${b.name} — Attendance`;
+  $("batchHubScreen").style.display = "none";
+  $("appScreen").style.display = "block";
+
+  await loadBatchWorkspaceData();
+
+  renderDailyAttendance();
+  renderStudents();
+  renderRegisterTable();
+  renderReportStudentSelector();
+
+  if (currentProfile.role === "ADMIN") loadUsersList();
 }
 
 async function createBatch(name) {
@@ -271,33 +324,41 @@ async function createBatch(name) {
   }
 
   try {
-    const { data, error } = await sb.from("batches").insert({ name: cleanName }).select().single();
+    const { error } = await sb.from("batches").insert({ name: cleanName });
     if (error) throw error;
-    await loadBatches();
-    selectedBatchId = data.id;
-    $("globalBatchSelector").value = selectedBatchId;
     closeBatchModal();
-    await loadData();
-    renderDailyAttendance();
-    renderStudents();
-    renderRegisterTable();
-    renderReportStudentSelector();
+    await openBatchHub();
   } catch (err) {
     showMessage("batchFormMessage", getReadableError(err), "error");
   }
 }
 
-// ------------------------------------------------------------
-// LOAD DATA
-// ------------------------------------------------------------
-async function loadData() {
-  let studQuery = sb.from("students").select("*").order("employee_id", { ascending: true });
-  if (selectedBatchId && selectedBatchId !== "default") {
-    studQuery = studQuery.eq("batch_id", selectedBatchId);
+async function deleteBatch(batchId, batchName) {
+  if (currentProfile.role !== "ADMIN") {
+    alert("Only Administrators can delete a batch.");
+    return;
   }
 
+  const confirmed = confirm(`Are you sure you want to delete "${batchName}"? This will remove its student associations.`);
+  if (!confirmed) return;
+
+  try {
+    const { error } = await sb.from("batches").delete().eq("id", batchId);
+    if (error) throw error;
+    await openBatchHub();
+  } catch (err) {
+    alert("Delete batch error: " + getReadableError(err));
+  }
+}
+
+// ------------------------------------------------------------
+// LOAD DATA FOR ACTIVE BATCH
+// ------------------------------------------------------------
+async function loadBatchWorkspaceData() {
+  if (!currentBatch) return;
+
   const [studRes, datesRes, attRes] = await Promise.all([
-    studQuery,
+    sb.from("students").select("*").eq("batch_id", currentBatch.id).order("employee_id", { ascending: true }),
     sb.from("attendance_dates").select("*").order("attendance_date", { ascending: true }),
     sb.from("attendance").select("*")
   ]);
@@ -333,7 +394,7 @@ function renderDailyAttendance() {
     body.innerHTML = `
       <tr>
         <td colspan="5" style="text-align:center; padding:24px; color:#64748b;">
-          ${students.length === 0 ? "No students in this batch. Add students in the Students tab." : "No matching students found."}
+          ${students.length === 0 ? "No students in this batch. Add students in the Students Roster tab." : "No matching students found."}
         </td>
       </tr>
     `;
@@ -436,7 +497,7 @@ async function saveAttendance() {
     const { error } = await sb.from("attendance").upsert(records, { onConflict: "attendance_date,student_id" });
     if (error) throw error;
 
-    await loadData();
+    await loadBatchWorkspaceData();
     renderDailyAttendance();
     showMessage("dailySaveMessage", `Attendance saved for ${formatDateDisplay(selectedDate)}`, "success");
   } catch (err) {
@@ -449,7 +510,7 @@ async function saveAttendance() {
 }
 
 // ------------------------------------------------------------
-// REGISTER (MONTHLY / YEARLY) & COPY FOR EXCEL
+// REGISTER & EXCEL EXPORT
 // ------------------------------------------------------------
 function getRegisterDates() {
   const mode = $("registerViewMode").value;
@@ -579,7 +640,7 @@ async function copyRegisterForExcel() {
 
   try {
     await navigator.clipboard.writeText(tsvData);
-    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates in DD-MM-YYYY format with exact Present/Absent statuses).", "success");
+    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates in DD-MM-YYYY format with exact Present/Absent values).", "success");
   } catch (err) {
     console.error("Clipboard failure:", err);
     showMessage("monthlyMessage", "Could not copy automatically. Check browser clipboard permissions.", "error");
@@ -636,13 +697,13 @@ async function saveStudent(employeeId, name, studentId = null) {
         employee_id: cleanId,
         name: cleanName,
         status: "ACTIVE",
-        batch_id: selectedBatchId !== "default" ? selectedBatchId : null
+        batch_id: currentBatch.id
       });
     }
 
     if (res.error) throw res.error;
 
-    await loadData();
+    await loadBatchWorkspaceData();
     renderStudents();
     renderDailyAttendance();
     renderRegisterTable();
@@ -661,7 +722,7 @@ async function toggleStudentLeft(studentId, currentStatus) {
   try {
     const { error } = await sb.from("students").update({ status: newStatus }).eq("id", studentId);
     if (error) throw error;
-    await loadData();
+    await loadBatchWorkspaceData();
     renderStudents();
     renderDailyAttendance();
   } catch (err) {
@@ -677,7 +738,7 @@ async function deleteStudent(studentId) {
   try {
     const { error } = await sb.from("students").delete().eq("id", studentId);
     if (error) throw error;
-    await loadData();
+    await loadBatchWorkspaceData();
     renderStudents();
     renderDailyAttendance();
     renderRegisterTable();
@@ -773,7 +834,7 @@ function renderStudentReport() {
 }
 
 // ------------------------------------------------------------
-// TEACHERS & ADMINS MANAGEMENT
+// USERS & BATCH ALLOCATION
 // ------------------------------------------------------------
 async function loadUsersList() {
   const body = $("usersTableBody");
@@ -781,21 +842,40 @@ async function loadUsersList() {
   body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:16px;">Loading user accounts...</td></tr>`;
 
   try {
-    const { data, error } = await sb.from("profiles").select("*").order("created_at", { ascending: true });
-    if (error) throw error;
+    const [uRes, allocRes] = await Promise.all([
+      sb.from("profiles").select("*").order("created_at", { ascending: true }),
+      sb.from("teacher_batches").select("profile_id, batch_id")
+    ]);
+
+    if (uRes.error) throw uRes.error;
+    const users = uRes.data || [];
+    const allocations = allocRes.data || [];
 
     body.innerHTML = "";
-    data.forEach((u, i) => {
+    users.forEach((u, i) => {
       const isSuper = u.employee_id === "241536";
+      const userAllocations = allocations.filter(a => a.profile_id === u.id);
+      const allocatedNames = userAllocations
+        .map(a => {
+          const matched = allBatches.find(b => b.id === a.batch_id);
+          return matched ? matched.name : null;
+        })
+        .filter(Boolean);
+
+      const allocationLabel = u.role === "ADMIN" 
+        ? '<span style="color:#059669; font-weight:600;">All Batches (Admin Access)</span>'
+        : (allocatedNames.length > 0 ? allocatedNames.join(", ") : '<span style="color:#94a3b8;">None allocated</span>');
+
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${i + 1}</td>
         <td><strong>${escapeHtml(u.employee_id)}</strong></td>
         <td>${escapeHtml(u.name)}</td>
         <td><span class="status-badge ${u.role === "ADMIN" ? "badge-admin" : "badge-teacher"}">${u.role}</span></td>
-        <td>${u.active ? "Active" : "Inactive"}</td>
+        <td>${allocationLabel}</td>
         <td>
-          ${isSuper ? '<span style="color:#64748b; font-size:12px;">Primary Admin</span>' : `
+          ${u.role !== "ADMIN" ? `<button type="button" class="small-button allocate-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Allocate Batches</button>` : ""}
+          ${isSuper ? '<span style="color:#64748b; font-size:12px; margin-left:6px;">Primary</span>' : `
             <button type="button" class="small-button delete-user-btn danger" data-id="${u.id}">Remove</button>
           `}
         </td>
@@ -804,6 +884,77 @@ async function loadUsersList() {
     });
   } catch (err) {
     body.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Failed to load accounts: ${getReadableError(err)}</td></tr>`;
+  }
+}
+
+async function openAllocateModal(profileId, teacherName) {
+  $("allocateProfileId").value = profileId;
+  $("allocateModalTitle").textContent = `Allocate Batches — ${teacherName}`;
+  clearMessage("allocateFormMessage");
+
+  // Get current allocations
+  const { data: currentAlloc } = await sb
+    .from("teacher_batches")
+    .select("batch_id")
+    .eq("profile_id", profileId);
+
+  const allocatedSet = new Set((currentAlloc || []).map(a => a.batch_id));
+
+  const listContainer = $("allocateBatchCheckboxes");
+  listContainer.innerHTML = "";
+
+  if (allBatches.length === 0) {
+    listContainer.innerHTML = `<p style="color:#64748b; font-size:13px;">No batches exist. Create batches first.</p>`;
+  } else {
+    allBatches.forEach(b => {
+      const label = document.createElement("label");
+      label.className = "checkbox-item";
+      label.innerHTML = `
+        <input type="checkbox" value="${b.id}" ${allocatedSet.has(b.id) ? "checked" : ""}>
+        <span>${escapeHtml(b.name)}</span>
+      `;
+      listContainer.appendChild(label);
+    });
+  }
+
+  $("allocateModal").style.display = "flex";
+}
+
+function closeAllocateModal() {
+  $("allocateModal").style.display = "none";
+}
+
+async function saveBatchAllocation() {
+  clearMessage("allocateFormMessage");
+  const profileId = $("allocateProfileId").value;
+  const checkboxes = document.querySelectorAll("#allocateBatchCheckboxes input[type='checkbox']");
+  const selectedBatchIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+
+  const btn = $("saveAllocateButton");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+    // Delete existing allocations
+    await sb.from("teacher_batches").delete().eq("profile_id", profileId);
+
+    // Insert new allocations
+    if (selectedBatchIds.length > 0) {
+      const rows = selectedBatchIds.map(bid => ({
+        profile_id: profileId,
+        batch_id: bid
+      }));
+      const { error: insErr } = await sb.from("teacher_batches").insert(rows);
+      if (insErr) throw insErr;
+    }
+
+    closeAllocateModal();
+    loadUsersList();
+  } catch (err) {
+    showMessage("allocateFormMessage", getReadableError(err), "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save Allocation";
   }
 }
 
@@ -984,7 +1135,9 @@ async function logout() {
   } finally {
     currentUser = null;
     currentProfile = null;
+    currentBatch = null;
     $("appScreen").style.display = "none";
+    $("batchHubScreen").style.display = "none";
     $("loginScreen").style.display = "flex";
     $("loginForm").reset();
     clearMessage("loginMessage");
@@ -994,32 +1147,38 @@ async function logout() {
 }
 
 // ------------------------------------------------------------
-// INITIALIZATION
+// INITIALIZATION & EVENT DELEGATION
 // ------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", async () => {
-  // Login & Logout
+  // Login Form
   $("loginForm").addEventListener("submit", e => {
     e.preventDefault();
     login($("loginEmployeeId").value, $("loginPassword").value);
   });
-  $("logoutButton").addEventListener("click", logout);
 
-  // Global Batch Change
-  $("globalBatchSelector").addEventListener("change", async e => {
-    selectedBatchId = e.target.value;
-    await loadData();
-    renderDailyAttendance();
-    renderStudents();
-    renderRegisterTable();
-    renderReportStudentSelector();
-  });
+  // Switch Batch Button
+  $("switchBatchBtn").addEventListener("click", openBatchHub);
 
-  $("openBatchModalBtn").addEventListener("click", openBatchModal);
+  // Batch Hub Actions
+  $("createBatchBtn").addEventListener("click", openBatchModal);
   $("closeBatchModal").addEventListener("click", closeBatchModal);
   $("cancelBatchButton").addEventListener("click", closeBatchModal);
   $("batchForm").addEventListener("submit", e => {
     e.preventDefault();
     createBatch($("newBatchName").value);
+  });
+
+  $("batchesGrid").addEventListener("click", e => {
+    const enterBtn = e.target.closest(".enter-batch-btn");
+    const delBtn = e.target.closest(".batch-delete-btn");
+
+    if (enterBtn) {
+      selectBatch(enterBtn.dataset.id);
+      return;
+    }
+    if (delBtn) {
+      deleteBatch(delBtn.dataset.id, delBtn.dataset.name);
+    }
   });
 
   // Navigation
@@ -1051,7 +1210,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   $("saveAttendanceButton").addEventListener("click", saveAttendance);
 
-  // Register (Monthly / Yearly)
+  // Register
   $("registerViewMode").addEventListener("change", e => {
     $("registerMonthWrapper").style.display = e.target.value === "yearly" ? "none" : "block";
     renderRegisterTable();
@@ -1093,7 +1252,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("reportYearSelector").addEventListener("change", renderStudentReport);
   $("reportMonthSelector").addEventListener("change", renderStudentReport);
 
-  // Users
+  // Users & Permissions
   $("addUserButton").addEventListener("click", openUserModal);
   $("closeUserModal").addEventListener("click", closeUserModal);
   $("cancelUserButton").addEventListener("click", closeUserModal);
@@ -1103,18 +1262,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("usersTableBody").addEventListener("click", e => {
+    const allocBtn = e.target.closest(".allocate-btn");
     const delBtn = e.target.closest(".delete-user-btn");
-    if (delBtn) removeUser(delBtn.dataset.id);
+
+    if (allocBtn) {
+      openAllocateModal(allocBtn.dataset.id, allocBtn.dataset.name);
+      return;
+    }
+    if (delBtn) {
+      removeUser(delBtn.dataset.id);
+    }
+  });
+
+  // Allocate Modal
+  $("closeAllocateModal").addEventListener("click", closeAllocateModal);
+  $("cancelAllocateButton").addEventListener("click", closeAllocateModal);
+  $("allocateForm").addEventListener("submit", e => {
+    e.preventDefault();
+    saveBatchAllocation();
   });
 
   // Modals click outside
   window.addEventListener("click", e => {
     if (e.target === $("batchModal")) closeBatchModal();
+    if (e.target === $("allocateModal")) closeAllocateModal();
     if (e.target === $("studentModal")) closeStudentModal();
     if (e.target === $("userModal")) closeUserModal();
   });
 
-  // Restore Session
+  // Restore session
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (session && session.user) {
