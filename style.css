@@ -30,9 +30,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ============================================================
-   BRAND BADGE & TAGS
-   ============================================================ */
+/* BRAND BADGE & TAGS */
 .brand-badge {
   display: inline-flex;
   align-items: center;
@@ -55,9 +53,7 @@ body {
   user-select: none;
 }
 
-/* ============================================================
-   SIGN-IN SCREEN
-   ============================================================ */
+/* SIGN-IN SCREEN */
 .login-wrapper {
   min-height: 100vh;
   display: flex;
@@ -225,9 +221,7 @@ input:focus, select:focus {
 .form-message.success { color: var(--green); }
 .form-message.error { color: var(--red); }
 
-/* ============================================================
-   APP SHELL
-   ============================================================ */
+/* APP SHELL */
 .app-header {
   min-height: 60px;
   display: flex;
@@ -300,9 +294,7 @@ input:focus, select:focus {
   padding: 24px;
 }
 
-/* ============================================================
-   BATCH HUB DIRECTORY
-   ============================================================ */
+/* BATCH HUB */
 .hub-header-bar {
   display: flex;
   align-items: center;
@@ -418,9 +410,7 @@ input:focus, select:focus {
   border-radius: 6px;
 }
 
-/* ============================================================
-   TABS & SECTIONS
-   ============================================================ */
+/* TABS & SECTIONS */
 .tab-nav {
   display: flex;
   gap: 6px;

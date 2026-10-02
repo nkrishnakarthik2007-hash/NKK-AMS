@@ -3,8 +3,6 @@
 // SUPABASE CONFIGURATION
 // ============================================================
 //
-// This file contains ONLY public Supabase connection details.
-//
 // SAFE:
 // - Supabase project URL
 // - Supabase publishable (anon) key
@@ -17,4 +15,4 @@
 
 const SUPABASE_URL = "https://dggokugqqeddfydcjvpb.supabase.co";
 
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_4bP4MAbFQdBlnRYx8TxCYw_1S7zPuO2";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_YzZ_lYn0fCUUfHOV0CJyiA_04IipIcG";
