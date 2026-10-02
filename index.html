@@ -3,53 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AMS — The One and Only Attendance Management System</title>
-  <link rel="icon" type="image/png" href="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png">
+  <title>AMS — Attendance Management System</title>
+  <!-- Institutional SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='8' fill='%230a2540'/><path d='M8 48 L32 14 L56 48' stroke='%2338bdf8' stroke-width='3' fill='none'/><text x='32' y='42' font-family='Arial, sans-serif' font-size='22' font-weight='900' fill='%23ffffff' text-anchor='middle'>AMS</text></svg>">
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
   <!-- ========================================================
-       SCREEN 1: HERO LANDING PAGE
+       SCREEN 1: OFFICIAL INSTITUTIONAL LANDING PORTAL
        ======================================================== -->
   <div id="landingScreen" class="landing-screen">
-    <canvas id="orbitCanvas" class="orbit-canvas"></canvas>
-
-    <header class="landing-nav">
-      <div class="landing-brand">
-        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Logo" class="brand-emblem-img">
-        <span class="brand-title-text">AMS</span>
+    <header class="official-top-bar">
+      <div class="gov-identity">
+        <span class="gov-seal">AMS</span>
+        <div class="gov-titles">
+          <span class="gov-main-title">ATTENDANCE MANAGEMENT SYSTEM</span>
+          <span class="gov-sub-title">Enterprise Trainee Operations & Records Portal</span>
+        </div>
       </div>
-      <div class="clock-display" id="liveClockBadge">
-        <span class="live-dot"></span>
-        <span id="liveClockText">Loading Clock...</span>
+      <div class="portal-clock" id="portalClockBadge">
+        <span class="clock-icon">🕒</span>
+        <span id="liveClockText">Synchronizing Clock...</span>
       </div>
     </header>
 
-    <main class="landing-hero-content">
-      <div class="emblem-wrapper">
-        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Emblem" class="hero-emblem-glow">
-      </div>
-      <h1 class="hero-headline">AMS</h1>
-      <p class="hero-subline">The One and Only Attendance Management System</p>
-      <p class="hero-description">Enterprise Trainee Operations, Automated Register Analytics & Batch Tracking Portal</p>
+    <main class="portal-hero-container">
+      <div class="portal-hero-card">
+        <div class="badge-tag">OFFICIAL SYSTEM ACCESS</div>
+        <h1 class="portal-main-heading">Central Attendance Registry</h1>
+        <p class="portal-caption">Authorized access for institutional batch records, trainee verification, and attendance reporting.</p>
 
-      <div class="landing-cta-cluster">
-        <!-- Dynamically swaps based on auth check -->
-        <button type="button" id="landingContinueBtn" class="cta-button primary-cta" style="display: none;">
-          Continue to Workspace →
-        </button>
-        <button type="button" id="landingLoginBtn" class="cta-button primary-cta">
-          Sign In to Portal
-        </button>
+        <div class="portal-metrics-bar">
+          <div class="metric-item">
+            <span class="metric-label">Access Level</span>
+            <span class="metric-val">Administrative / Staff</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Network Status</span>
+            <span class="metric-val status-online">Connected</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Time Zone</span>
+            <span class="metric-val">IST (UTC +5:30)</span>
+          </div>
+        </div>
+
+        <div class="portal-cta-cluster">
+          <button type="button" id="landingContinueBtn" class="primary-portal-btn" style="display: none;">
+            Continue to Workspace →
+          </button>
+          <button type="button" id="landingLoginBtn" class="primary-portal-btn">
+            Sign In to Portal
+          </button>
+        </div>
       </div>
     </main>
 
-    <footer class="landing-footer">
-      <div class="nkk-signature">Made by NKK</div>
+    <footer class="portal-footer">
+      <span>Official Attendance Management System • All Records Encrypted</span>
     </footer>
   </div>
 
@@ -58,16 +73,16 @@
        ======================================================== -->
   <div id="loginScreen" class="login-screen" style="display: none;">
     <div class="login-card">
-      <button type="button" class="back-to-landing-btn" id="backToLandingFromLogin">← Back</button>
+      <button type="button" class="back-link-btn" id="backToLandingFromLogin">← Return to Portal</button>
       <div class="brand-header">
-        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Logo" class="login-emblem">
-        <h1>Sign In</h1>
-        <p class="hero-tagline">Attendance Management System</p>
+        <div class="login-seal">AMS</div>
+        <h1>Portal Authentication</h1>
+        <p class="hero-tagline">Enter your credentials to access the system</p>
       </div>
 
       <form id="loginForm">
         <div class="form-group">
-          <label for="loginEmployeeId">Employee ID or Email</label>
+          <label for="loginEmployeeId">Employee ID or Registered Email</label>
           <input
             type="text"
             id="loginEmployeeId"
@@ -88,11 +103,9 @@
           >
         </div>
 
-        <button type="submit" id="loginButton" class="primary-button full-width">Sign In</button>
+        <button type="submit" id="loginButton" class="primary-button full-width">Authenticate</button>
         <p id="loginMessage" class="message" aria-live="polite"></p>
       </form>
-
-      <div class="brand-watermark">Made by NKK</div>
     </div>
   </div>
 
@@ -102,10 +115,10 @@
   <div id="batchHubScreen" class="hub-screen" style="display: none;">
     <header class="top-header">
       <div class="header-brand">
-        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Emblem" class="nav-emblem">
+        <span class="header-seal">AMS</span>
         <div>
-          <h1>AMS — The One and Only Attendance Management System</h1>
-          <p>Batch Selection Hub</p>
+          <h1>Attendance Management System</h1>
+          <p>Batch Selection Directory</p>
         </div>
       </div>
       <div class="header-user">
@@ -121,29 +134,27 @@
       <div class="hub-hero">
         <div>
           <h2>Training Batches</h2>
-          <p id="hubSubtitle">Select a batch workspace to manage attendance records and student rosters.</p>
+          <p id="hubSubtitle">Select an allocated batch workspace to manage records and attendance.</p>
         </div>
         <div id="adminBatchControls" style="display: none;">
-          <button type="button" id="createBatchBtn" class="primary-button">+ Add Batch</button>
+          <button type="button" id="createBatchBtn" class="primary-button">+ Add New Batch</button>
         </div>
       </div>
 
       <div id="batchesGrid" class="batches-grid"></div>
-
-      <div class="footer-signature">Made by NKK</div>
     </main>
   </div>
 
   <!-- ========================================================
-       SCREEN 4: MAIN WORKSPACE (INSIDE SELECTED BATCH)
+       SCREEN 4: MAIN WORKSPACE
        ======================================================== -->
   <div id="appScreen" class="app-screen" style="display: none;">
     <header class="top-header">
       <div class="header-brand">
-        <img src="https://i.ibb.co/7d1W6sZ4/Glossy-AMS-Attendance-Emblem.png" alt="AMS Emblem" class="nav-emblem">
+        <span class="header-seal">AMS</span>
         <div>
-          <h1 id="workspaceBatchTitle">Batch Attendance</h1>
-          <p>The One and Only Attendance Management System</p>
+          <h1 id="workspaceBatchTitle">Batch Attendance Workspace</h1>
+          <p>Official Attendance Management System</p>
         </div>
       </div>
 
@@ -158,7 +169,6 @@
     </header>
 
     <main class="main-container">
-      <!-- NAVIGATION TABS -->
       <nav class="main-nav">
         <button type="button" class="nav-button active" data-section="dailySection">
           Daily Attendance
@@ -181,8 +191,8 @@
       <section id="dailySection" class="app-section active-section">
         <div class="section-header">
           <div>
-            <h2>Daily Attendance</h2>
-            <p>Select Year, Month, and Date to view or mark attendance for this batch.</p>
+            <h2>Daily Attendance Record</h2>
+            <p>Select date parameters to record or inspect attendance for this batch.</p>
           </div>
         </div>
 
@@ -210,7 +220,7 @@
               </select>
             </div>
             <div class="control-group">
-              <label for="dailyDaySelector">Date</label>
+              <label for="dailyDaySelector">Day</label>
               <select id="dailyDaySelector"></select>
             </div>
             <div class="control-group align-self-end">
@@ -219,7 +229,7 @@
           </div>
 
           <div class="control-group search-control">
-            <label for="studentSearch">Filter Student</label>
+            <label for="studentSearch">Filter Trainee</label>
             <input type="search" id="studentSearch" placeholder="Search by Employee ID or Name">
           </div>
         </div>
@@ -248,10 +258,10 @@
             <thead>
               <tr>
                 <th style="width: 60px;">S.No</th>
-                <th style="width: 140px;">Employee ID</th>
+                <th style="width: 150px;">Employee ID</th>
                 <th>Student Name</th>
-                <th style="width: 200px;">Mark Status</th>
-                <th style="width: 140px;">Current Status</th>
+                <th style="width: 220px;">Mark Status</th>
+                <th style="width: 140px;">Recorded Status</th>
               </tr>
             </thead>
             <tbody id="dailyAttendanceBody"></tbody>
@@ -260,7 +270,7 @@
 
         <div class="save-area">
           <button type="button" id="saveAttendanceButton" class="primary-button">
-            Save Attendance
+            Save Attendance Records
           </button>
           <span id="dailySaveMessage" class="message" aria-live="polite"></span>
         </div>
@@ -271,7 +281,7 @@
         <div class="section-header">
           <div>
             <h2>Attendance Register</h2>
-            <p>Export attendance grids formatted with dates (DD-MM-YYYY) and exact Present/Absent values.</p>
+            <p>Export attendance grids formatted with dates (DD-MM-YYYY) and exact Present/Absent statuses.</p>
           </div>
           <button type="button" id="copyMonthlyButton" class="primary-button">
             Copy for Excel
@@ -323,7 +333,7 @@
         <div class="section-header">
           <div>
             <h2>Students</h2>
-            <p>Manage students enrolled in this batch.</p>
+            <p>Manage students registered in this batch.</p>
           </div>
           <button type="button" id="addStudentButton" class="primary-button">
             + Add Student
@@ -335,9 +345,9 @@
             <thead>
               <tr>
                 <th style="width: 60px;">S.No</th>
-                <th style="width: 140px;">Employee ID</th>
+                <th style="width: 150px;">Employee ID</th>
                 <th>Student Name</th>
-                <th style="width: 130px;">Enrolment</th>
+                <th style="width: 140px;">Status</th>
                 <th style="width: 250px;">Actions</th>
               </tr>
             </thead>
@@ -351,7 +361,7 @@
         <div class="section-header">
           <div>
             <h2>Individual Student Report</h2>
-            <p>Comprehensive date-wise status log and attendance percentages.</p>
+            <p>Comprehensive date-wise attendance log and overall performance percentage.</p>
           </div>
         </div>
 
@@ -387,7 +397,7 @@
         </div>
 
         <div id="studentReport" class="report-area">
-          <p class="empty-message">Select a student and date range to view report.</p>
+          <p class="empty-message">Select a student and date range to view attendance report.</p>
         </div>
       </section>
 
@@ -408,19 +418,17 @@
             <thead>
               <tr>
                 <th style="width: 60px;">S.No</th>
-                <th style="width: 140px;">Employee ID</th>
+                <th style="width: 150px;">Employee ID</th>
                 <th>Staff Name</th>
                 <th style="width: 120px;">Role</th>
                 <th>Allocated Batches</th>
-                <th style="width: 280px;">Actions</th>
+                <th style="width: 290px;">Actions</th>
               </tr>
             </thead>
             <tbody id="usersTableBody"></tbody>
           </table>
         </div>
       </section>
-
-      <div class="footer-signature">Made by NKK</div>
     </main>
   </div>
 
@@ -437,8 +445,8 @@
       <form id="batchForm">
         <input type="hidden" id="batchEditId">
         <div class="form-group">
-          <label for="newBatchName">Batch Name</label>
-          <input type="text" id="newBatchName" placeholder="e.g. Batch 01 or Hetero Trainees 2026" required>
+          <label for="newBatchName">Batch Title</label>
+          <input type="text" id="newBatchName" placeholder="e.g. Batch 01 or 2026 Trainees" required>
         </div>
         <div class="modal-actions">
           <button type="button" id="cancelBatchButton" class="secondary-button">Cancel</button>
@@ -449,15 +457,15 @@
     </div>
   </div>
 
-  <!-- MODAL: ALLOCATE BATCHES TO TEACHER -->
+  <!-- MODAL: ALLOCATE BATCHES -->
   <div id="allocateModal" class="modal" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="allocateModalTitle">Allocate Batches</h2>
         <button type="button" id="closeAllocateModal" class="close-button">&times;</button>
       </div>
-      <p style="font-size: 13px; color: #64748b; margin-top: -10px; margin-bottom: 16px;">
-        Select the batches this teacher is allowed to access:
+      <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 16px;">
+        Select the batches this staff member is authorized to access:
       </p>
       <form id="allocateForm">
         <input type="hidden" id="allocateProfileId">
@@ -471,7 +479,7 @@
     </div>
   </div>
 
-  <!-- MODAL: RESET PASSWORD (ADMIN FOR USER) -->
+  <!-- MODAL: RESET PASSWORD -->
   <div id="passwordModal" class="modal" style="display: none;">
     <div class="modal-content">
       <div class="modal-header">
@@ -555,7 +563,6 @@
     </div>
   </div>
 
-  <!-- SCRIPTS -->
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
