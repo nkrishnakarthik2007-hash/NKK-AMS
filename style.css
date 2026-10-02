@@ -1,6 +1,6 @@
 /* ============================================================
    AMS — ATTENDANCE MANAGEMENT SYSTEM
-   CLEAN INSTITUTIONAL STYLES (WITH FROZEN COLS & HORIZONTAL SCROLL)
+   EXCEL-STYLE ATTENDANCE REGISTER STYLING
    ============================================================ */
 
 :root {
@@ -544,7 +544,7 @@ input:focus, select:focus {
 }
 
 /* ============================================================
-   HORIZONTAL SCROLL & STICKY COLUMNS
+   EXCEL-STYLE TABLE WRAPPER & FROZEN COLUMNS
    ============================================================ */
 .table-wrapper {
   width: 100%;
@@ -556,20 +556,21 @@ input:focus, select:focus {
   border-radius: 6px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Custom styled horizontal scrollbar */
+/* Stylized horizontal scrollbar */
 .table-wrapper::-webkit-scrollbar {
-  height: 11px;
+  height: 12px;
 }
 .table-wrapper::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 5px;
+  background: #f8fafc;
+  border-radius: 6px;
 }
 .table-wrapper::-webkit-scrollbar-thumb {
   background: #94a3b8;
-  border-radius: 5px;
-  border: 2px solid #f1f5f9;
+  border-radius: 6px;
+  border: 3px solid #f8fafc;
 }
 .table-wrapper::-webkit-scrollbar-thumb:hover {
   background: #64748b;
@@ -585,8 +586,8 @@ input:focus, select:focus {
 
 .data-table th, .data-table td {
   padding: 10px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  border-right: 1px solid #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
@@ -605,7 +606,7 @@ input:focus, select:focus {
   background: #f8fafc;
 }
 
-/* STICKY COLUMNS: S.No, Employee ID, Student Name */
+/* FROZEN STICKY COLUMNS (S.No, Employee ID, Student Name) */
 .excel-grid th.sticky-col,
 .excel-grid td.sticky-col {
   position: sticky;
@@ -616,7 +617,7 @@ input:focus, select:focus {
 
 .excel-grid th.sticky-col {
   background: #f8fafc;
-  z-index: 3;
+  z-index: 4;
 }
 
 .excel-grid tbody tr:hover td.sticky-col {
@@ -640,14 +641,15 @@ input:focus, select:focus {
 .excel-grid .col-name {
   left: 185px;
   min-width: 220px;
-  box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12); /* clean visual separator */
+  /* Visual boundary shadow separating locked names from scrolling dates */
+  box-shadow: 4px 0 6px -2px rgba(15, 23, 42, 0.15);
 }
 
-/* DYNAMIC DATE & STATS COLUMNS */
+/* DYNAMIC DATE & METRIC COLUMNS */
 .excel-grid th.date-col,
 .excel-grid td.date-col {
   min-width: 110px;
-  max-width: 120px;
+  max-width: 110px;
   text-align: center;
 }
 
@@ -658,7 +660,7 @@ input:focus, select:focus {
   background: #fafafa;
 }
 
-/* ATTENDANCE BUTTONS & STATUS */
+/* ATTENDANCE BUTTONS & STATUS PILLS */
 .attendance-buttons {
   display: inline-flex;
   gap: 5px;
@@ -701,8 +703,8 @@ input:focus, select:focus {
 .pill-admin { background: #ede9fe; color: #6d28d9; }
 .pill-teacher { background: #e0e7ff; color: #4338ca; }
 
-.excel-grid td.cell-present { color: var(--green); font-weight: 600; background: #ecfdf5; }
-.excel-grid td.cell-absent { color: var(--red); font-weight: 600; background: #fef2f2; }
+.excel-grid td.cell-present { color: var(--green); font-weight: 700; background: #ecfdf5; }
+.excel-grid td.cell-absent { color: var(--red); font-weight: 700; background: #fef2f2; }
 
 .action-footer {
   display: flex;

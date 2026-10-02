@@ -1,1490 +1,868 @@
-// ============================================================
-// AMS — ATTENDANCE MANAGEMENT SYSTEM
-// CONTROLLER: PERSISTENT SUPABASE SYNC & STICKY HORIZONTAL REGISTER
-// ============================================================
+/* ============================================================
+   AMS — ATTENDANCE MANAGEMENT SYSTEM
+   EXCEL-STYLE ATTENDANCE REGISTER STYLING
+   ============================================================ */
 
-const EMAIL_DOMAIN = "attendance.example.com";
-
-if (typeof SUPABASE_URL === "undefined" || typeof SUPABASE_PUBLISHABLE_KEY === "undefined") {
-  document.body.innerHTML = `
-    <div style="padding:40px; font-family:Arial,sans-serif; color:#222;">
-      <h2>Configuration Error</h2>
-      <p>config.js is missing or could not be loaded.</p>
-    </div>
-  `;
-  throw new Error("Supabase configuration missing.");
+:root {
+  --primary: #0f2942;
+  --primary-hover: #194066;
+  --bg-slate: #f1f5f9;
+  --surface-white: #ffffff;
+  --border-light: #e2e8f0;
+  --border-dark: #cbd5e1;
+  --text-dark: #0f172a;
+  --text-muted: #64748b;
+  --green: #059669;
+  --green-bg: #ecfdf5;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
 }
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage
-  }
-});
-
-// In-Memory State
-let currentUser = null;
-let currentProfile = null;
-let allBatches = [];
-let permittedBatches = [];
-let currentBatch = null;
-
-let students = [];
-let attendanceDates = [];
-let attendanceRecords = [];
-
-function $(id) {
-  return document.getElementById(id);
+* {
+  box-sizing: border-box;
 }
 
-function showMessage(elementId, message, type = "") {
-  const el = $(elementId);
-  if (!el) return;
-  el.textContent = message;
-  el.className = "form-message " + type;
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-slate);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
 }
 
-function clearMessage(elementId) {
-  const el = $(elementId);
-  if (!el) return;
-  el.textContent = "";
-  el.className = "form-message";
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 4px;
 }
 
-function formatDateDisplay(dateStr) {
-  if (!dateStr) return "";
-  const parts = dateStr.split("-");
-  return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
+.by-nkk-tag {
+  font-family: 'Dancing Script', -apple-system, cursive, sans-serif;
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: right;
+  margin-top: 16px;
+  user-select: none;
 }
 
-function escapeHtml(val) {
-  if (val === null || val === undefined) return "";
-  return String(val)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+/* SIGN-IN SCREEN */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f2942;
+  padding: 20px;
 }
 
-function getReadableError(error) {
-  if (!error) return "An unexpected error occurred.";
-  const msg = error.message || error.error_description || String(error);
-  if (msg.includes("Invalid login credentials")) return "Invalid Employee ID / Email or password.";
-  if (msg.includes("No API key found")) return "Supabase publishable key is missing in config.js.";
-  if (msg.includes("Failed to fetch")) return "Network connection error.";
-  return msg;
+.login-box {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface-white);
+  border-radius: 8px;
+  padding: 36px 32px 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
-// ------------------------------------------------------------
-// CLOCK
-// ------------------------------------------------------------
-function initLiveClock() {
-  function updateTime() {
-    const now = new Date();
-    const dateFormatted = now.toLocaleDateString("en-IN", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
-    const timeFormatted = now.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true
-    });
-    const badge = $("liveClockText");
-    if (badge) {
-      badge.textContent = `${dateFormatted} • ${timeFormatted} (IST)`;
-    }
-  }
-  updateTime();
-  setInterval(updateTime, 1000);
+.login-header {
+  text-align: center;
+  margin-bottom: 22px;
 }
 
-// ------------------------------------------------------------
-// DATE DROPDOWN GENERATORS
-// ------------------------------------------------------------
-function populateYearSelects() {
-  const years = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
-  const currentYear = new Date().getFullYear();
-
-  ["dailyYearSelector", "registerYearSelector", "reportYearSelector"].forEach(id => {
-    const sel = $(id);
-    if (!sel) return;
-    sel.innerHTML = "";
-    years.forEach(y => {
-      const opt = document.createElement("option");
-      opt.value = String(y);
-      opt.textContent = String(y);
-      if (y === currentYear) opt.selected = true;
-      sel.appendChild(opt);
-    });
-  });
+.login-header h2 {
+  margin: 10px 0 0;
+  font-size: 22px;
+  color: var(--primary);
 }
 
-function populateDailyDays() {
-  const year = parseInt($("dailyYearSelector").value, 10);
-  const month = parseInt($("dailyMonthSelector").value, 10);
-  const daySel = $("dailyDaySelector");
-  if (!daySel) return;
-
-  const prevSelected = parseInt(daySel.value, 10) || new Date().getDate();
-  const daysInMonth = new Date(year, month, 0).getDate();
-
-  daySel.innerHTML = "";
-  for (let d = 1; d <= daysInMonth; d++) {
-    const opt = document.createElement("option");
-    const valStr = String(d).padStart(2, "0");
-    opt.value = valStr;
-    opt.textContent = valStr;
-    if (d === prevSelected || (d === daysInMonth && prevSelected > daysInMonth)) {
-      opt.selected = true;
-    }
-    daySel.appendChild(opt);
-  }
+.login-header .subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
-function setDateSelectorsToToday() {
-  const today = new Date();
-  $("dailyYearSelector").value = String(today.getFullYear());
-  $("dailyMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
-  populateDailyDays();
-  $("dailyDaySelector").value = String(today.getDate()).padStart(2, "0");
+.clock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
 }
 
-function getSelectedDailyDate() {
-  const y = $("dailyYearSelector").value;
-  const m = $("dailyMonthSelector").value;
-  const d = $("dailyDaySelector").value;
-  return `${y}-${m}-${d}`;
+.clock-dot {
+  width: 7px;
+  height: 7px;
+  background: #10b981;
+  border-radius: 50%;
 }
 
-// ------------------------------------------------------------
-// AUTHENTICATION
-// ------------------------------------------------------------
-async function login(credentialInput, password) {
-  clearMessage("loginMessage");
-  const input = credentialInput.trim();
-  if (!input || !password) {
-    showMessage("loginMessage", "Enter Employee ID and password.", "error");
-    return;
-  }
-
-  const email = input.includes("@") ? input.toLowerCase() : `${input.toLowerCase()}@${EMAIL_DOMAIN}`;
-  const btn = $("loginButton");
-  btn.disabled = true;
-  btn.textContent = "Authenticating...";
-
-  try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    if (!data || !data.user) throw new Error("No session created.");
-
-    currentUser = data.user;
-    await enterApp();
-  } catch (err) {
-    console.error("Login failed:", err);
-    showMessage("loginMessage", getReadableError(err), "error");
-    btn.disabled = false;
-    btn.textContent = "Sign In";
-  }
+.session-block {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  text-align: center;
 }
 
-async function enterApp() {
-  try {
-    const { data: { user }, error: userError } = await sb.auth.getUser();
-    if (userError || !user) throw userError || new Error("Session invalid.");
-    currentUser = user;
-
-    let { data: profile, error: profErr } = await sb
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profErr) throw profErr;
-
-    if (!profile) {
-      const emailPrefix = (user.email || "").split("@")[0].toUpperCase();
-      const isAdmin = ["241536", "ADMIN001"].includes(emailPrefix);
-      const { data: newProf, error: insErr } = await sb
-        .from("profiles")
-        .insert({
-          id: user.id,
-          employee_id: emailPrefix || "241536",
-          name: emailPrefix === "241536" ? "Super Admin" : "Administrator",
-          role: isAdmin ? "ADMIN" : "USER",
-          active: true
-        })
-        .select()
-        .single();
-
-      if (insErr) throw insErr;
-      profile = newProf;
-    }
-
-    if (!profile.active) {
-      await sb.auth.signOut();
-      throw new Error("This account is inactive.");
-    }
-
-    currentProfile = profile;
-    const userDisplay = `${profile.name || profile.employee_id} (${profile.role})`;
-    $("loggedInUser").textContent = userDisplay;
-    $("hubLoggedInUser").textContent = userDisplay;
-
-    if (profile.role === "ADMIN") {
-      $("usersNavTab").style.display = "inline-block";
-      $("adminBatchControls").style.display = "block";
-    } else {
-      $("usersNavTab").style.display = "none";
-      $("adminBatchControls").style.display = "none";
-    }
-
-    populateYearSelects();
-    const today = new Date();
-    $("dailyMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
-    $("registerMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
-    $("reportMonthSelector").value = String(today.getMonth() + 1).padStart(2, "0");
-    populateDailyDays();
-    $("dailyDaySelector").value = String(today.getDate()).padStart(2, "0");
-
-    await openBatchHub();
-  } catch (err) {
-    console.error("Startup error:", err);
-    await sb.auth.signOut();
-    showLoginScreen();
-    showMessage("loginMessage", getReadableError(err), "error");
-    $("loginButton").disabled = false;
-    $("loginButton").textContent = "Sign In";
-  }
+.session-notice {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 600;
 }
 
-function showLoginScreen() {
-  $("loginScreen").style.display = "flex";
-  $("batchHubScreen").style.display = "none";
-  $("appScreen").style.display = "none";
-  checkActiveSession();
+.divider {
+  position: relative;
+  text-align: center;
+  margin: 16px 0 6px;
 }
 
-async function checkActiveSession() {
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    const block = $("activeSessionBlock");
-    if (session && session.user) {
-      block.style.display = "block";
-    } else {
-      block.style.display = "none";
-    }
-  } catch (e) {
-    $("activeSessionBlock").style.display = "none";
-  }
+.divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-light);
 }
 
-// ------------------------------------------------------------
-// BATCH HUB & PERMISSIONS
-// ------------------------------------------------------------
-async function openBatchHub() {
-  $("loginScreen").style.display = "none";
-  $("appScreen").style.display = "none";
-  $("batchHubScreen").style.display = "block";
-
-  const { data: bData } = await sb.from("batches").select("*").order("name", { ascending: true });
-  allBatches = bData || [];
-
-  if (currentProfile.role === "ADMIN") {
-    permittedBatches = allBatches;
-    $("hubSubtitle").textContent = "Administrative Directory: Manage batch workspaces and staff allocations.";
-  } else {
-    const { data: allocData } = await sb
-      .from("teacher_batches")
-      .select("batch_id")
-      .eq("profile_id", currentProfile.id);
-
-    const allowedIds = new Set((allocData || []).map(a => a.batch_id));
-    permittedBatches = allBatches.filter(b => allowedIds.has(b.id));
-    $("hubSubtitle").textContent = "Instructor Directory: Access assigned batches to record daily attendance.";
-  }
-
-  renderBatchesGrid();
+.divider span {
+  position: relative;
+  background: #f8fafc;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
-function renderBatchesGrid() {
-  const grid = $("batchesGrid");
-  if (!grid) return;
-  grid.innerHTML = "";
-
-  if (permittedBatches.length === 0) {
-    grid.innerHTML = `
-      <div class="empty-hub-box">
-        <h3>No Batches Assigned</h3>
-        <p>You have not been assigned to any training batches yet. Please contact an administrator.</p>
-      </div>
-    `;
-    return;
-  }
-
-  const isSuperAdmin = currentProfile.role === "ADMIN";
-
-  permittedBatches.forEach(b => {
-    const card = document.createElement("div");
-    card.className = "batch-item-card";
-    card.innerHTML = `
-      <div class="batch-top-row">
-        <span class="batch-badge">BATCH</span>
-        ${isSuperAdmin ? `
-          <div class="batch-admin-actions">
-            <button type="button" class="btn-micro edit-batch-btn" data-id="${b.id}" data-name="${escapeHtml(b.name)}">Edit</button>
-            <button type="button" class="btn-micro text-danger batch-delete-btn" data-id="${b.id}" data-name="${escapeHtml(b.name)}">Delete</button>
-          </div>
-        ` : ""}
-      </div>
-      <h3 class="batch-title">${escapeHtml(b.name)}</h3>
-      <p class="batch-caption">Trainee Attendance Workspace</p>
-      <button type="button" class="btn-open-batch" data-id="${b.id}">Open Workspace →</button>
-    `;
-    grid.appendChild(card);
-  });
+.form-group {
+  margin-bottom: 16px;
 }
 
-async function selectBatch(batchId) {
-  const b = allBatches.find(item => item.id === batchId);
-  if (!b) return;
-  currentBatch = b;
-
-  $("workspaceBatchTitle").textContent = `${b.name} — Attendance Workspace`;
-  $("batchHubScreen").style.display = "none";
-  $("appScreen").style.display = "block";
-
-  await loadBatchWorkspaceData();
-
-  renderDailyAttendance();
-  renderStudents();
-  renderRegisterTable();
-  renderReportStudentSelector();
-
-  if (currentProfile.role === "ADMIN") loadUsersList();
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  text-transform: uppercase;
 }
 
-function openCreateBatchModal() {
-  $("batchModalTitle").textContent = "Create New Batch";
-  $("batchEditId").value = "";
-  $("newBatchName").value = "";
-  clearMessage("batchFormMessage");
-  $("batchModal").style.display = "flex";
-  $("newBatchName").focus();
+input, select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-dark);
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+  background: #ffffff;
 }
 
-function openEditBatchModal(batchId, batchName) {
-  $("batchModalTitle").textContent = "Rename Batch";
-  $("batchEditId").value = batchId;
-  $("newBatchName").value = batchName;
-  clearMessage("batchFormMessage");
-  $("batchModal").style.display = "flex";
-  $("newBatchName").focus();
+input:focus, select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(15, 41, 66, 0.15);
 }
 
-function closeBatchModal() {
-  $("batchModal").style.display = "none";
+.full-width {
+  width: 100%;
 }
 
-async function saveBatch(batchId, name) {
-  clearMessage("batchFormMessage");
-  const cleanName = name.trim();
-  if (!cleanName) {
-    showMessage("batchFormMessage", "Enter batch name.", "error");
-    return;
-  }
-
-  try {
-    if (batchId) {
-      const { error } = await sb.from("batches").update({ name: cleanName }).eq("id", batchId);
-      if (error) throw error;
-    } else {
-      const { error } = await sb.from("batches").insert({ name: cleanName });
-      if (error) throw error;
-    }
-    closeBatchModal();
-    await openBatchHub();
-  } catch (err) {
-    showMessage("batchFormMessage", getReadableError(err), "error");
-  }
+.btn-primary {
+  padding: 10px 18px;
+  background: var(--primary);
+  color: #ffffff;
+  border: 0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-async function deleteBatch(batchId, batchName) {
-  if (currentProfile.role !== "ADMIN") {
-    alert("Only Administrators can delete a batch.");
-    return;
-  }
-
-  const confirmed = confirm(`Are you sure you want to delete "${batchName}"?`);
-  if (!confirmed) return;
-
-  try {
-    const { error } = await sb.from("batches").delete().eq("id", batchId);
-    if (error) throw error;
-    await openBatchHub();
-  } catch (err) {
-    alert("Delete batch error: " + getReadableError(err));
-  }
+.btn-primary:hover {
+  background: var(--primary-hover);
 }
 
-// ------------------------------------------------------------
-// LOAD AND SYNC ATTENDANCE FOR ACTIVE BATCH
-// ------------------------------------------------------------
-async function loadBatchWorkspaceData() {
-  if (!currentBatch) return;
-
-  // 1. Fetch all students registered under this batch
-  const { data: batchStudents, error: studErr } = await sb
-    .from("students")
-    .select("*")
-    .eq("batch_id", currentBatch.id)
-    .order("employee_id", { ascending: true });
-
-  if (studErr) throw studErr;
-  students = batchStudents || [];
-
-  if (students.length === 0) {
-    attendanceDates = [];
-    attendanceRecords = [];
-    return;
-  }
-
-  const studentIds = students.map(s => s.id);
-
-  // 2. Fetch all recorded attendance rows and dates registered
-  const [datesRes, attRes] = await Promise.all([
-    sb.from("attendance_dates").select("*").order("attendance_date", { ascending: true }),
-    sb.from("attendance").select("*").in("student_id", studentIds)
-  ]);
-
-  if (datesRes.error) throw datesRes.error;
-  if (attRes.error) throw attRes.error;
-
-  attendanceDates = datesRes.data || [];
-  attendanceRecords = attRes.data || [];
+.btn-secondary {
+  padding: 10px 16px;
+  border: 1px solid var(--border-dark);
+  background: #ffffff;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
-// ------------------------------------------------------------
-// DAILY ATTENDANCE
-// ------------------------------------------------------------
-function renderDailyAttendance() {
-  const body = $("dailyAttendanceBody");
-  if (!body) return;
-
-  const search = $("studentSearch").value.trim().toLowerCase();
-  const selectedDate = getSelectedDailyDate();
-
-  body.innerHTML = "";
-
-  const activeStudents = students.filter(s => s.status !== "LEFT");
-  const filtered = activeStudents.filter(s => {
-    if (!search) return true;
-    return (s.employee_id || "").toLowerCase().includes(search) || (s.name || "").toLowerCase().includes(search);
-  });
-
-  if (filtered.length === 0) {
-    body.innerHTML = `
-      <tr>
-        <td colspan="5" style="text-align:center; padding:24px; color:#64748b;">
-          ${students.length === 0 ? "No students in this batch. Add students in the Students tab." : "No matching trainees found."}
-        </td>
-      </tr>
-    `;
-    updateDailySummary();
-    return;
-  }
-
-  filtered.forEach((s, idx) => {
-    const existing = attendanceRecords.find(r => r.student_id === s.id && r.attendance_date === selectedDate);
-    const status = existing ? existing.status : "Not Marked";
-
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${idx + 1}</td>
-      <td><strong>${escapeHtml(s.employee_id)}</strong></td>
-      <td>${escapeHtml(s.name)}</td>
-      <td>
-        <div class="attendance-buttons">
-          <button
-            type="button"
-            class="btn-mark btn-present ${status === "Present" ? "selected" : ""}"
-            data-student-id="${s.id}"
-            data-status="Present"
-          >
-            Present
-          </button>
-          <button
-            type="button"
-            class="btn-mark btn-absent ${status === "Absent" ? "selected" : ""}"
-            data-student-id="${s.id}"
-            data-status="Absent"
-          >
-            Absent
-          </button>
-        </div>
-      </td>
-      <td>
-        <span class="status-pill ${status === "Present" ? "pill-present" : status === "Absent" ? "pill-absent" : "pill-notmarked"}">
-          ${status}
-        </span>
-      </td>
-    `;
-    body.appendChild(row);
-  });
-
-  updateDailySummary();
+.btn-secondary:hover {
+  background: #f1f5f9;
 }
 
-function handleAttendanceButton(studentId, status) {
-  const selectedDate = getSelectedDailyDate();
-  const idx = attendanceRecords.findIndex(r => r.student_id === studentId && r.attendance_date === selectedDate);
-  const newRec = { student_id: studentId, attendance_date: selectedDate, status };
-
-  if (idx >= 0) {
-    attendanceRecords[idx] = { ...attendanceRecords[idx], ...newRec };
-  } else {
-    attendanceRecords.push(newRec);
-  }
-
-  renderDailyAttendance();
-  clearMessage("dailySaveMessage");
+.form-message {
+  min-height: 18px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-function updateDailySummary() {
-  const selectedDate = getSelectedDailyDate();
-  const activeStudents = students.filter(s => s.status !== "LEFT");
-  const total = activeStudents.length;
+.form-message.success { color: var(--green); }
+.form-message.error { color: var(--red); }
 
-  const present = attendanceRecords.filter(r => r.attendance_date === selectedDate && r.status === "Present").length;
-  const absent = attendanceRecords.filter(r => r.attendance_date === selectedDate && r.status === "Absent").length;
-  const notMarked = Math.max(0, total - present - absent);
-
-  $("dailyTotal").textContent = total;
-  $("dailyPresent").textContent = present;
-  $("dailyAbsent").textContent = absent;
-  $("dailyNotMarked").textContent = notMarked;
+/* APP SHELL */
+.app-header {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 28px;
+  background: var(--primary);
+  color: #ffffff;
 }
 
-async function saveAttendance() {
-  const selectedDate = getSelectedDailyDate();
-  const activeStudentIds = new Set(students.map(s => s.id));
-
-  const records = attendanceRecords
-    .filter(r => r.attendance_date === selectedDate && activeStudentIds.has(r.student_id))
-    .filter(r => r.status === "Present" || r.status === "Absent")
-    .map(r => ({
-      student_id: r.student_id,
-      attendance_date: r.attendance_date,
-      status: r.status
-    }));
-
-  if (records.length === 0) {
-    showMessage("dailySaveMessage", "Mark at least one student Present or Absent.", "error");
-    return;
-  }
-
-  const btn = $("saveAttendanceButton");
-  btn.disabled = true;
-  btn.textContent = "Saving to Supabase...";
-
-  try {
-    // 1. Ensure the date is registered in attendance_dates
-    const { error: dateErr } = await sb
-      .from("attendance_dates")
-      .upsert({ attendance_date: selectedDate }, { onConflict: "attendance_date" });
-    if (dateErr) throw dateErr;
-
-    // 2. Persist attendance entries
-    const { error: attErr } = await sb
-      .from("attendance")
-      .upsert(records, { onConflict: "attendance_date,student_id" });
-    if (attErr) throw attErr;
-
-    // 3. Fully re-fetch from database so memory and cache never desynchronize
-    await loadBatchWorkspaceData();
-    renderDailyAttendance();
-    renderRegisterTable();
-    renderReportStudentSelector();
-
-    showMessage("dailySaveMessage", `Saved ${records.length} records for ${formatDateDisplay(selectedDate)}!`, "success");
-  } catch (err) {
-    console.error("Save error:", err);
-    showMessage("dailySaveMessage", getReadableError(err), "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Save Attendance Records";
-  }
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-// ------------------------------------------------------------
-// REGISTER (MONTHLY / YEARLY) WITH PERSISTENT DATE DISCOVERY
-// ------------------------------------------------------------
-function getRegisterDates() {
-  const mode = $("registerViewMode").value;
-  const year = $("registerYearSelector").value;
-  const month = $("registerMonthSelector").value;
-
-  // Combine dates from attendance_dates table AND all recorded attendance rows for this batch
-  const discoveredDates = new Set();
-  
-  attendanceDates.forEach(d => {
-    if (d.attendance_date) discoveredDates.add(d.attendance_date);
-  });
-
-  attendanceRecords.forEach(r => {
-    if (r.attendance_date) discoveredDates.add(r.attendance_date);
-  });
-
-  const allDatesList = Array.from(discoveredDates);
-
-  if (mode === "yearly") {
-    return allDatesList
-      .filter(d => d.startsWith(`${year}-`))
-      .sort();
-  }
-
-  // Monthly View
-  const prefix = `${year}-${month}`;
-  return allDatesList
-    .filter(d => d.startsWith(prefix))
-    .sort();
+.header-left h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
 }
 
-function renderRegisterTable() {
-  const head = $("monthlyTableHead");
-  const body = $("monthlyTableBody");
-  if (!head || !body) return;
-
-  head.innerHTML = "";
-  body.innerHTML = "";
-
-  const dates = getRegisterDates();
-
-  const trHead = document.createElement("tr");
-  trHead.innerHTML = `
-    <th class="sticky-col col-sno">S.No</th>
-    <th class="sticky-col col-empid">Employee ID</th>
-    <th class="sticky-col col-name">Student Name</th>
-  `;
-
-  dates.forEach(d => {
-    const th = document.createElement("th");
-    th.className = "date-col";
-    th.textContent = formatDateDisplay(d);
-    trHead.appendChild(th);
-  });
-
-  trHead.innerHTML += `
-    <th class="stat-col">Total Present</th>
-    <th class="stat-col">Total Absent</th>
-    <th class="stat-col">Attendance %</th>
-  `;
-  head.appendChild(trHead);
-
-  if (students.length === 0) {
-    body.innerHTML = `<tr><td colspan="${dates.length + 6}" style="text-align:center; padding:20px; color:#64748b;">No students enrolled in this batch.</td></tr>`;
-    return;
-  }
-
-  if (dates.length === 0) {
-    const mode = $("registerViewMode").value;
-    const periodLabel = mode === "yearly" ? $("registerYearSelector").value : `${$("registerMonthSelector").value}-${$("registerYearSelector").value}`;
-    body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:#64748b;">No attendance dates recorded for ${periodLabel}. Mark and save daily attendance to populate dates here.</td></tr>`;
-    return;
-  }
-
-  students.forEach((s, idx) => {
-    let pCount = 0;
-    let aCount = 0;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="sticky-col col-sno">${idx + 1}</td>
-      <td class="sticky-col col-empid"><strong>${escapeHtml(s.employee_id)}</strong></td>
-      <td class="sticky-col col-name">${escapeHtml(s.name)} ${s.status === "LEFT" ? '<span style="color:#dc2626; font-size:11px;">(Left)</span>' : ""}</td>
-    `;
-
-    dates.forEach(d => {
-      const rec = attendanceRecords.find(r => r.student_id === s.id && r.attendance_date === d);
-      const status = rec ? rec.status : "-";
-
-      if (status === "Present") pCount++;
-      if (status === "Absent") aCount++;
-
-      const td = document.createElement("td");
-      td.className = "date-col";
-      td.textContent = status;
-      if (status === "Present") td.classList.add("cell-present");
-      if (status === "Absent") td.classList.add("cell-absent");
-      tr.appendChild(td);
-    });
-
-    const total = pCount + aCount;
-    const pct = total > 0 ? ((pCount / total) * 100).toFixed(1) : "0.0";
-
-    tr.innerHTML += `
-      <td class="stat-col"><strong>${pCount}</strong></td>
-      <td class="stat-col">${aCount}</td>
-      <td class="stat-col"><strong>${pct}%</strong></td>
-    `;
-    body.appendChild(tr);
-  });
+.header-left p {
+  margin: 2px 0 0;
+  color: #cbd5e1;
+  font-size: 12px;
 }
 
-async function copyRegisterForExcel() {
-  clearMessage("monthlyMessage");
-  const dates = getRegisterDates();
-
-  if (students.length === 0) {
-    showMessage("monthlyMessage", "No student data available to copy.", "error");
-    return;
-  }
-
-  const headers = ["S.No", "Employee ID", "Student Name", ...dates.map(d => formatDateDisplay(d)), "Total Present", "Total Absent", "Attendance %"];
-  const rows = [headers.join("\t")];
-
-  students.forEach((s, idx) => {
-    let pCount = 0;
-    let aCount = 0;
-
-    const row = [idx + 1, s.employee_id, s.name];
-
-    dates.forEach(d => {
-      const rec = attendanceRecords.find(r => r.student_id === s.id && r.attendance_date === d);
-      const status = rec ? rec.status : "-";
-      if (status === "Present") pCount++;
-      if (status === "Absent") aCount++;
-      row.push(status);
-    });
-
-    const total = pCount + aCount;
-    const pct = total > 0 ? `${((pCount / total) * 100).toFixed(1)}%` : "0.0%";
-
-    row.push(pCount, aCount, pct);
-    rows.push(row.join("\t"));
-  });
-
-  const tsvData = rows.join("\n");
-
-  try {
-    await navigator.clipboard.writeText(tsvData);
-    showMessage("monthlyMessage", "Register copied! Paste directly into Excel (Dates in DD-MM-YYYY format with exact Present/Absent values).", "success");
-  } catch (err) {
-    console.error("Clipboard failure:", err);
-    showMessage("monthlyMessage", "Could not copy automatically. Check browser permissions.", "error");
-  }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-// ------------------------------------------------------------
-// STUDENTS MANAGEMENT
-// ------------------------------------------------------------
-function renderStudents() {
-  const body = $("studentsTableBody");
-  if (!body) return;
-  body.innerHTML = "";
-
-  students.forEach((s, idx) => {
-    const isLeft = s.status === "LEFT";
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${idx + 1}</td>
-      <td><strong>${escapeHtml(s.employee_id)}</strong></td>
-      <td>${escapeHtml(s.name)}</td>
-      <td>
-        <span class="status-pill ${isLeft ? "pill-notmarked" : "pill-active"}">
-          ${isLeft ? "Left / Discontinued" : "Active"}
-        </span>
-      </td>
-      <td>
-        <button type="button" class="btn-table-action edit-student-btn" data-id="${s.id}">Edit</button>
-        <button type="button" class="btn-table-action toggle-left-btn" data-id="${s.id}" data-current="${s.status || "ACTIVE"}">
-          ${isLeft ? "Reactivate" : "Mark as Left"}
-        </button>
-        <button type="button" class="btn-table-action text-danger delete-student-btn" data-id="${s.id}">Delete</button>
-      </td>
-    `;
-    body.appendChild(row);
-  });
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-size: 12px;
 }
 
-async function saveStudent(employeeId, name, studentId = null) {
-  const cleanId = employeeId.trim().toUpperCase();
-  const cleanName = name.trim();
-
-  if (!cleanId || !cleanName) {
-    showMessage("studentFormMessage", "Enter Employee ID and Name.", "error");
-    return;
-  }
-
-  try {
-    let res;
-    if (studentId) {
-      res = await sb.from("students").update({ employee_id: cleanId, name: cleanName }).eq("id", studentId);
-    } else {
-      res = await sb.from("students").insert({
-        employee_id: cleanId,
-        name: cleanName,
-        status: "ACTIVE",
-        batch_id: currentBatch.id
-      });
-    }
-
-    if (res.error) throw res.error;
-
-    await loadBatchWorkspaceData();
-    renderStudents();
-    renderDailyAttendance();
-    renderRegisterTable();
-    renderReportStudentSelector();
-    closeStudentModal();
-  } catch (err) {
-    showMessage("studentFormMessage", getReadableError(err), "error");
-  }
+.indicator-dot {
+  width: 7px;
+  height: 7px;
+  background: #10b981;
+  border-radius: 50%;
 }
 
-async function toggleStudentLeft(studentId, currentStatus) {
-  const newStatus = currentStatus === "LEFT" ? "ACTIVE" : "LEFT";
-  const actionText = newStatus === "LEFT" ? "mark this student as Left?" : "reactivate this student?";
-  if (!confirm(`Are you sure you want to ${actionText}`)) return;
-
-  try {
-    const { error } = await sb.from("students").update({ status: newStatus }).eq("id", studentId);
-    if (error) throw error;
-    await loadBatchWorkspaceData();
-    renderStudents();
-    renderDailyAttendance();
-    renderRegisterTable();
-  } catch (err) {
-    alert(getReadableError(err));
-  }
+.btn-outline-header {
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-async function deleteStudent(studentId) {
-  const s = students.find(item => item.id === studentId);
-  if (!s) return;
-  if (!confirm(`Permanently delete student ${s.name} (${s.employee_id})?`)) return;
-
-  try {
-    const { error } = await sb.from("students").delete().eq("id", studentId);
-    if (error) throw error;
-    await loadBatchWorkspaceData();
-    renderStudents();
-    renderDailyAttendance();
-    renderRegisterTable();
-    renderReportStudentSelector();
-  } catch (err) {
-    alert(getReadableError(err));
-  }
+.btn-outline-header:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-// ------------------------------------------------------------
-// REPORTS
-// ------------------------------------------------------------
-function renderReportStudentSelector() {
-  const sel = $("reportStudentSelector");
-  if (!sel) return;
-  sel.innerHTML = `<option value="">Select Student</option>`;
-  students.forEach(s => {
-    const opt = document.createElement("option");
-    opt.value = s.id;
-    opt.textContent = `${s.employee_id} - ${s.name} ${s.status === "LEFT" ? "(Left)" : ""}`;
-    sel.appendChild(opt);
-  });
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
 }
 
-function renderStudentReport() {
-  const studentId = $("reportStudentSelector").value;
-  const year = $("reportYearSelector").value;
-  const month = $("reportMonthSelector").value;
-  const area = $("studentReport");
-
-  if (!studentId) {
-    area.innerHTML = `<p class="empty-state">Select a student from the list.</p>`;
-    return;
-  }
-
-  const student = students.find(s => String(s.id) === String(studentId));
-  if (!student) return;
-
-  const dates = getRegisterDates();
-
-  let p = 0;
-  let a = 0;
-
-  const rows = dates.map(d => {
-    const rec = attendanceRecords.find(r => String(r.student_id) === String(studentId) && r.attendance_date === d);
-    const status = rec ? rec.status : "Not Marked";
-    if (status === "Present") p++;
-    if (status === "Absent") a++;
-
-    return `
-      <tr>
-        <td>${formatDateDisplay(d)}</td>
-        <td>
-          <span class="status-pill ${status === "Present" ? "pill-present" : status === "Absent" ? "pill-absent" : "pill-notmarked"}">
-            ${status}
-          </span>
-        </td>
-      </tr>
-    `;
-  }).join("");
-
-  const total = p + a;
-  const pct = total > 0 ? ((p / total) * 100).toFixed(1) : "0.0";
-
-  area.innerHTML = `
-    <div class="report-summary-grid">
-      <div class="rep-card"><strong>Student ID</strong><span>${escapeHtml(student.employee_id)}</span></div>
-      <div class="rep-card"><strong>Name</strong><span>${escapeHtml(student.name)}</span></div>
-      <div class="rep-card"><strong>Present</strong><span>${p}</span></div>
-      <div class="rep-card"><strong>Absent</strong><span>${a}</span></div>
-      <div class="rep-card"><strong>Attendance %</strong><span>${pct}%</span></div>
-    </div>
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Attendance Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows || `<tr><td colspan="2">No dates recorded for this range.</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `;
+/* BATCH HUB */
+.hub-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  background: #ffffff;
+  padding: 20px 24px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  border-left: 4px solid var(--primary);
 }
 
-// ------------------------------------------------------------
-// USERS & ALLOCATIONS
-// ------------------------------------------------------------
-async function loadUsersList() {
-  const body = $("usersTableBody");
-  if (!body) return;
-  body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:16px;">Loading user accounts...</td></tr>`;
-
-  try {
-    const [uRes, allocRes] = await Promise.all([
-      sb.from("profiles").select("*").order("created_at", { ascending: true }),
-      sb.from("teacher_batches").select("profile_id, batch_id")
-    ]);
-
-    if (uRes.error) throw uRes.error;
-    const users = uRes.data || [];
-    const allocations = allocRes.data || [];
-
-    body.innerHTML = "";
-    users.forEach((u, i) => {
-      const isSuper = u.employee_id === "241536";
-      const userAllocations = allocations.filter(a => a.profile_id === u.id);
-      const allocatedNames = userAllocations
-        .map(a => {
-          const matched = allBatches.find(b => b.id === a.batch_id);
-          return matched ? matched.name : null;
-        })
-        .filter(Boolean);
-
-      const allocationLabel = u.role === "ADMIN" 
-        ? '<span class="text-success font-bold">All Batches (Admin)</span>'
-        : (allocatedNames.length > 0 ? allocatedNames.join(", ") : '<span style="color:#94a3b8;">None allocated</span>');
-
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${i + 1}</td>
-        <td><strong>${escapeHtml(u.employee_id)}</strong></td>
-        <td>${escapeHtml(u.name)}</td>
-        <td><span class="status-pill ${u.role === "ADMIN" ? "pill-admin" : "pill-teacher"}">${u.role}</span></td>
-        <td>${allocationLabel}</td>
-        <td>
-          <button type="button" class="btn-table-action reset-pwd-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Reset Pwd</button>
-          ${u.role !== "ADMIN" ? `<button type="button" class="btn-table-action allocate-btn" data-id="${u.id}" data-name="${escapeHtml(u.name)}">Allocate</button>` : ""}
-          ${isSuper ? '<span style="color:#64748b; font-size:12px; margin-left:6px;">Primary</span>' : `
-            <button type="button" class="btn-table-action text-danger delete-user-btn" data-id="${u.id}">Remove</button>
-          `}
-        </td>
-      `;
-      body.appendChild(row);
-    });
-  } catch (err) {
-    body.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Failed to load accounts: ${getReadableError(err)}</td></tr>`;
-  }
+.hub-header-bar h2 {
+  margin: 0;
+  font-size: 19px;
+  color: var(--primary);
 }
 
-function openPasswordModal(userId, userName) {
-  $("passwordTargetUserId").value = userId;
-  $("passwordModalTitle").textContent = `Reset Password — ${userName}`;
-  $("newStaffPassword").value = "";
-  clearMessage("passwordFormMessage");
-  $("passwordModal").style.display = "flex";
-  $("newStaffPassword").focus();
+.hub-header-bar p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
-function closePasswordModal() {
-  $("passwordModal").style.display = "none";
+.batches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 18px;
 }
 
-async function handlePasswordReset() {
-  clearMessage("passwordFormMessage");
-  const userId = $("passwordTargetUserId").value;
-  const newPassword = $("newStaffPassword").value;
-
-  if (!newPassword || newPassword.length < 6) {
-    showMessage("passwordFormMessage", "Password must be at least 6 characters.", "error");
-    return;
-  }
-
-  const btn = $("savePasswordButton");
-  btn.disabled = true;
-  btn.textContent = "Updating...";
-
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session ? session.access_token : "";
-
-    const payload = {
-      action: "updateUser",
-      userId: userId,
-      password: newPassword
-    };
-
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_PUBLISHABLE_KEY,
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const resData = await res.json().catch(() => ({}));
-    if (!res.ok || resData.error) throw new Error(resData.error || `Update failed (${res.status})`);
-
-    closePasswordModal();
-    alert("Password updated successfully.");
-  } catch (err) {
-    showMessage("passwordFormMessage", getReadableError(err), "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Update Password";
-  }
+.batch-item-card {
+  background: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
-async function openAllocateModal(profileId, teacherName) {
-  $("allocateProfileId").value = profileId;
-  $("allocateModalTitle").textContent = `Allocate Batches — ${teacherName}`;
-  clearMessage("allocateFormMessage");
-
-  const { data: currentAlloc } = await sb
-    .from("teacher_batches")
-    .select("batch_id")
-    .eq("profile_id", profileId);
-
-  const allocatedSet = new Set((currentAlloc || []).map(a => a.batch_id));
-
-  const listContainer = $("allocateBatchCheckboxes");
-  listContainer.innerHTML = "";
-
-  if (allBatches.length === 0) {
-    listContainer.innerHTML = `<p style="color:#64748b; font-size:13px;">No batches exist. Create batches first.</p>`;
-  } else {
-    allBatches.forEach(b => {
-      const label = document.createElement("label");
-      label.className = "checkbox-item";
-      label.innerHTML = `
-        <input type="checkbox" value="${b.id}" ${allocatedSet.has(b.id) ? "checked" : ""}>
-        <span>${escapeHtml(b.name)}</span>
-      `;
-      listContainer.appendChild(label);
-    });
-  }
-
-  $("allocateModal").style.display = "flex";
+.batch-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-function closeAllocateModal() {
-  $("allocateModal").style.display = "none";
+.batch-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 3px;
 }
 
-async function saveBatchAllocation() {
-  clearMessage("allocateFormMessage");
-  const profileId = $("allocateProfileId").value;
-  const checkboxes = document.querySelectorAll("#allocateBatchCheckboxes input[type='checkbox']");
-  const selectedBatchIds = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-
-  const btn = $("saveAllocateButton");
-  btn.disabled = true;
-  btn.textContent = "Saving...";
-
-  try {
-    await sb.from("teacher_batches").delete().eq("profile_id", profileId);
-
-    if (selectedBatchIds.length > 0) {
-      const rows = selectedBatchIds.map(bid => ({
-        profile_id: profileId,
-        batch_id: bid
-      }));
-      const { error: insErr } = await sb.from("teacher_batches").insert(rows);
-      if (insErr) throw insErr;
-    }
-
-    closeAllocateModal();
-    loadUsersList();
-  } catch (err) {
-    showMessage("allocateFormMessage", getReadableError(err), "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Save Allocation";
-  }
+.batch-admin-actions {
+  display: flex;
+  gap: 6px;
 }
 
-async function createNewUser(employeeId, name, role, password) {
-  clearMessage("userFormMessage");
-  const cleanId = employeeId.trim().toUpperCase();
-  const cleanName = name.trim();
-
-  if (!cleanId || !cleanName) {
-    showMessage("userFormMessage", "Enter Employee ID and Name.", "error");
-    return;
-  }
-  if (!password || password.length < 6) {
-    showMessage("userFormMessage", "Password must be at least 6 characters.", "error");
-    return;
-  }
-
-  const btn = $("saveUserButton");
-  btn.disabled = true;
-  btn.textContent = "Creating...";
-
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session ? session.access_token : "";
-
-    const payload = {
-      action: "create",
-      type: "create",
-      employee_id: cleanId,
-      employeeId: cleanId,
-      name: cleanName,
-      role: role,
-      password: password
-    };
-
-    let res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_PUBLISHABLE_KEY,
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    let resData = await res.json().catch(() => ({}));
-    if (!res.ok && resData.error && resData.error.includes("Unknown action")) {
-      payload.action = "createUser";
-      res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      resData = await res.json().catch(() => ({}));
-    }
-
-    if (!res.ok || resData.error) throw new Error(resData.error || `Error ${res.status}`);
-
-    closeUserModal();
-    loadUsersList();
-  } catch (err) {
-    showMessage("userFormMessage", getReadableError(err), "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Create Account";
-  }
+.btn-micro {
+  background: transparent;
+  border: 1px solid var(--border-dark);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 3px;
+  cursor: pointer;
 }
 
-async function removeUser(userId) {
-  if (!confirm("Are you sure you want to remove this user?")) return;
-
-  try {
-    const { data: { session } } = await sb.auth.getSession();
-    const token = session ? session.access_token : "";
-
-    const payload = { action: "delete", userId, id: userId };
-    let res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_PUBLISHABLE_KEY,
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
-    });
-
-    let resData = await res.json().catch(() => ({}));
-    if (!res.ok && resData.error && resData.error.includes("Unknown action")) {
-      payload.action = "deleteUser";
-      res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_PUBLISHABLE_KEY,
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      resData = await res.json().catch(() => ({}));
-    }
-
-    if (!res.ok || resData.error) throw new Error(resData.error || "Failed to delete user.");
-    loadUsersList();
-  } catch (err) {
-    alert(getReadableError(err));
-  }
+.btn-micro:hover {
+  background: #f1f5f9;
 }
 
-// ------------------------------------------------------------
-// MODALS & NAVIGATION
-// ------------------------------------------------------------
-function openStudentModal(student = null) {
-  $("studentModal").style.display = "flex";
-  clearMessage("studentFormMessage");
-  if (student) {
-    $("studentModalTitle").textContent = "Edit Student";
-    $("studentEditId").value = student.id;
-    $("studentEmployeeId").value = student.employee_id;
-    $("studentName").value = student.name;
-  } else {
-    $("studentModalTitle").textContent = "Add Student";
-    $("studentEditId").value = "";
-    $("studentEmployeeId").value = "";
-    $("studentName").value = "";
-  }
-  $("studentEmployeeId").focus();
+.batch-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary);
 }
 
-function closeStudentModal() {
-  $("studentModal").style.display = "none";
-  $("studentForm").reset();
-  clearMessage("studentFormMessage");
+.batch-caption {
+  margin: 4px 0 16px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-function openUserModal() {
-  $("userModal").style.display = "flex";
-  $("userForm").reset();
-  clearMessage("userFormMessage");
+.btn-open-batch {
+  margin-top: auto;
+  width: 100%;
+  padding: 9px;
+  background: #f8fafc;
+  border: 1px solid var(--border-dark);
+  border-radius: 4px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-function closeUserModal() {
-  $("userModal").style.display = "none";
-  $("userForm").reset();
-  clearMessage("userFormMessage");
+.btn-open-batch:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
 }
 
-function showSection(sectionId) {
-  document.querySelectorAll(".content-section").forEach(s => s.classList.remove("active-section"));
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-
-  const target = $(sectionId);
-  if (target) target.classList.add("active-section");
-
-  const btn = document.querySelector(`[data-section="${sectionId}"]`);
-  if (btn) btn.classList.add("active");
+.empty-hub-box {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 48px;
+  background: #ffffff;
+  border: 1px dashed var(--border-dark);
+  border-radius: 6px;
 }
 
-async function logout() {
-  try {
-    await sb.auth.signOut();
-  } catch (err) {
-    console.error("SignOut error:", err);
-  } finally {
-    currentUser = null;
-    currentProfile = null;
-    currentBatch = null;
-    showLoginScreen();
-    $("loginForm").reset();
-    clearMessage("loginMessage");
-    $("loginButton").disabled = false;
-    $("loginButton").textContent = "Sign In";
-  }
+/* TABS & SECTIONS */
+.tab-nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border-light);
 }
 
-// ------------------------------------------------------------
-// INITIALIZATION
-// ------------------------------------------------------------
-document.addEventListener("DOMContentLoaded", async () => {
-  initLiveClock();
+.tab-btn {
+  padding: 10px 18px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
 
-  $("landingContinueBtn").addEventListener("click", async () => {
-    await enterApp();
-  });
+.tab-btn.active {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
 
-  $("loginForm").addEventListener("submit", e => {
-    e.preventDefault();
-    login($("loginEmployeeId").value, $("loginPassword").value);
-  });
+.content-section {
+  display: none;
+}
 
-  $("switchBatchBtn").addEventListener("click", openBatchHub);
+.content-section.active-section {
+  display: block;
+}
 
-  $("createBatchBtn").addEventListener("click", openCreateBatchModal);
-  $("closeBatchModal").addEventListener("click", closeBatchModal);
-  $("cancelBatchButton").addEventListener("click", closeBatchModal);
-  $("batchForm").addEventListener("submit", e => {
-    e.preventDefault();
-    saveBatch($("batchEditId").value, $("newBatchName").value);
-  });
+.section-title-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
 
-  $("batchesGrid").addEventListener("click", e => {
-    const enterBtn = e.target.closest(".btn-open-batch");
-    const editBtn = e.target.closest(".edit-batch-btn");
-    const delBtn = e.target.closest(".batch-delete-btn");
+.section-title-strip h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--primary);
+}
 
-    if (enterBtn) {
-      selectBatch(enterBtn.dataset.id);
-      return;
-    }
-    if (editBtn) {
-      openEditBatchModal(editBtn.dataset.id, editBtn.dataset.name);
-      return;
-    }
-    if (delBtn) {
-      deleteBatch(delBtn.dataset.id, delBtn.dataset.name);
-    }
-  });
+.section-title-strip p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
 
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      showSection(btn.dataset.section);
-      if (btn.dataset.section === "monthlySection") renderRegisterTable();
-      if (btn.dataset.section === "reportsSection") renderStudentReport();
-      if (btn.dataset.section === "usersSection") loadUsersList();
-    });
-  });
+.filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+}
 
-  // Daily Controls
-  $("dailyYearSelector").addEventListener("change", () => {
-    populateDailyDays();
-    renderDailyAttendance();
-  });
-  $("dailyMonthSelector").addEventListener("change", () => {
-    populateDailyDays();
-    renderDailyAttendance();
-  });
-  $("dailyDaySelector").addEventListener("change", renderDailyAttendance);
-  $("setTodayBtn").addEventListener("click", () => {
-    setDateSelectorsToToday();
-    renderDailyAttendance();
-  });
-  $("studentSearch").addEventListener("input", renderDailyAttendance);
+.filter-group-date {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-  $("dailyAttendanceBody").addEventListener("click", e => {
-    const btn = e.target.closest(".btn-mark");
-    if (!btn) return;
-    handleAttendanceButton(btn.dataset.studentId, btn.dataset.status);
-  });
-  $("saveAttendanceButton").addEventListener("click", saveAttendance);
+.field-item {
+  min-width: 140px;
+}
 
-  // Register Controls
-  $("registerViewMode").addEventListener("change", e => {
-    $("registerMonthWrapper").style.display = e.target.value === "yearly" ? "none" : "block";
-    renderRegisterTable();
-  });
-  $("registerYearSelector").addEventListener("change", renderRegisterTable);
-  $("registerMonthSelector").addEventListener("change", renderRegisterTable);
-  $("copyMonthlyButton").addEventListener("click", copyRegisterForExcel);
+.field-item.search-field {
+  min-width: 260px;
+  flex: 1;
+}
 
-  // Students Controls
-  $("addStudentButton").addEventListener("click", () => openStudentModal());
-  $("closeStudentModal").addEventListener("closeStudentModal", closeStudentModal);
-  $("cancelStudentButton").addEventListener("click", closeStudentModal);
-  $("studentForm").addEventListener("submit", e => {
-    e.preventDefault();
-    saveStudent($("studentEmployeeId").value, $("studentName").value, $("studentEditId").value || null);
-  });
+.align-end {
+  align-self: flex-end;
+}
 
-  $("studentsTableBody").addEventListener("click", e => {
-    const editBtn = e.target.closest(".edit-student-btn");
-    const toggleBtn = e.target.closest(".toggle-left-btn");
-    const delBtn = e.target.closest(".delete-student-btn");
+.btn-outline-sm {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-dark);
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
-    if (editBtn) {
-      const s = students.find(item => String(item.id) === String(editBtn.dataset.id));
-      if (s) openStudentModal(s);
-      return;
-    }
-    if (toggleBtn) {
-      toggleStudentLeft(toggleBtn.dataset.id, toggleBtn.dataset.current);
-      return;
-    }
-    if (delBtn) {
-      deleteStudent(delBtn.dataset.id);
-    }
-  });
+.btn-outline-sm:hover {
+  background: #f1f5f9;
+}
 
-  // Reports Controls
-  $("reportStudentSelector").addEventListener("change", renderStudentReport);
-  $("reportYearSelector").addEventListener("change", renderStudentReport);
-  $("reportMonthSelector").addEventListener("change", renderStudentReport);
+/* SUMMARY CARDS */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
 
-  // Users Controls
-  $("addUserButton").addEventListener("click", openUserModal);
-  $("closeUserModal").addEventListener("click", closeUserModal);
-  $("cancelUserButton").addEventListener("click", closeUserModal);
-  $("userForm").addEventListener("submit", e => {
-    e.preventDefault();
-    createNewUser($("userEmployeeId").value, $("userName").value, $("userRole").value, $("userPassword").value);
-  });
+.sum-card {
+  padding: 14px 18px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  border-left: 4px solid var(--text-muted);
+}
 
-  $("usersTableBody").addEventListener("click", e => {
-    const allocBtn = e.target.closest(".allocate-btn");
-    const resetPwdBtn = e.target.closest(".reset-pwd-btn");
-    const delBtn = e.target.closest(".delete-user-btn");
+.sum-card.border-green { border-left-color: var(--green); }
+.sum-card.border-red { border-left-color: var(--red); }
+.sum-card.border-gray { border-left-color: #94a3b8; }
 
-    if (allocBtn) {
-      openAllocateModal(allocBtn.dataset.id, allocBtn.dataset.name);
-      return;
-    }
-    if (resetPwdBtn) {
-      openPasswordModal(resetPwdBtn.dataset.id, resetPwdBtn.dataset.name);
-      return;
-    }
-    if (delBtn) {
-      removeUser(delBtn.dataset.id);
-    }
-  });
+.sum-title {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
 
-  $("closePasswordModal").addEventListener("click", closePasswordModal);
-  $("cancelPasswordButton").addEventListener("click", closePasswordModal);
-  $("passwordForm").addEventListener("submit", e => {
-    e.preventDefault();
-    handlePasswordReset();
-  });
+.sum-card strong {
+  font-size: 24px;
+  color: var(--primary);
+}
 
-  $("closeAllocateModal").addEventListener("click", closeAllocateModal);
-  $("cancelAllocateButton").addEventListener("click", closeAllocateModal);
-  $("allocateForm").addEventListener("submit", e => {
-    e.preventDefault();
-    saveBatchAllocation();
-  });
+/* ============================================================
+   EXCEL-STYLE TABLE WRAPPER & FROZEN COLUMNS
+   ============================================================ */
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
+}
 
-  window.addEventListener("click", e => {
-    if (e.target === $("batchModal")) closeBatchModal();
-    if (e.target === $("allocateModal")) closeAllocateModal();
-    if (e.target === $("passwordModal")) closePasswordModal();
-    if (e.target === $("studentModal")) closeStudentModal();
-    if (e.target === $("userModal")) closeUserModal();
-  });
+/* Stylized horizontal scrollbar */
+.table-wrapper::-webkit-scrollbar {
+  height: 12px;
+}
+.table-wrapper::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 6px;
+}
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 6px;
+  border: 3px solid #f8fafc;
+}
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
 
-  showLoginScreen();
-});
+.data-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.data-table th, .data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.data-table th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.data-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+/* FROZEN STICKY COLUMNS (S.No, Employee ID, Student Name) */
+.excel-grid th.sticky-col,
+.excel-grid td.sticky-col {
+  position: sticky;
+  background: #ffffff;
+  z-index: 2;
+  text-align: left;
+}
+
+.excel-grid th.sticky-col {
+  background: #f8fafc;
+  z-index: 4;
+}
+
+.excel-grid tbody tr:hover td.sticky-col {
+  background: #f1f5f9;
+}
+
+.excel-grid .col-sno {
+  left: 0;
+  width: 55px;
+  min-width: 55px;
+  max-width: 55px;
+  text-align: center !important;
+}
+
+.excel-grid .col-empid {
+  left: 55px;
+  width: 130px;
+  min-width: 130px;
+}
+
+.excel-grid .col-name {
+  left: 185px;
+  min-width: 220px;
+  /* Visual boundary shadow separating locked names from scrolling dates */
+  box-shadow: 4px 0 6px -2px rgba(15, 23, 42, 0.15);
+}
+
+/* DYNAMIC DATE & METRIC COLUMNS */
+.excel-grid th.date-col,
+.excel-grid td.date-col {
+  min-width: 110px;
+  max-width: 110px;
+  text-align: center;
+}
+
+.excel-grid th.stat-col,
+.excel-grid td.stat-col {
+  min-width: 110px;
+  text-align: center;
+  background: #fafafa;
+}
+
+/* ATTENDANCE BUTTONS & STATUS PILLS */
+.attendance-buttons {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.btn-mark {
+  padding: 5px 12px;
+  border: 1px solid var(--border-dark);
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-present { color: var(--green); }
+.btn-present:hover, .btn-present.selected {
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+
+.btn-absent { color: var(--red); }
+.btn-absent:hover, .btn-absent.selected {
+  border-color: var(--red);
+  background: var(--red-bg);
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pill-present { background: var(--green-bg); color: var(--green); }
+.pill-absent { background: var(--red-bg); color: var(--red); }
+.pill-notmarked { background: #f1f5f9; color: var(--text-muted); }
+.pill-active { background: #e0f2fe; color: #0284c7; }
+.pill-admin { background: #ede9fe; color: #6d28d9; }
+.pill-teacher { background: #e0e7ff; color: #4338ca; }
+
+.excel-grid td.cell-present { color: var(--green); font-weight: 700; background: #ecfdf5; }
+.excel-grid td.cell-absent { color: var(--red); font-weight: 700; background: #fef2f2; }
+
+.action-footer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.btn-table-action {
+  padding: 4px 8px;
+  border: 1px solid var(--border-dark);
+  background: #ffffff;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.btn-table-action:hover {
+  background: #f1f5f9;
+}
+
+.text-danger { color: var(--red); }
+.text-success { color: var(--green); }
+.font-bold { font-weight: 700; }
+
+/* REPORTS */
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.rep-card {
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+}
+
+.rep-card strong {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.rep-card span {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.empty-state {
+  padding: 36px;
+  text-align: center;
+  color: var(--text-muted);
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+}
+
+/* MODALS */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+.modal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-top h3 {
+  margin: 0;
+  font-size: 17px;
+  color: var(--primary);
+}
+
+.btn-close-modal {
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.modal-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: -8px;
+  margin-bottom: 14px;
+}
+
+.modal-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.checkbox-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.checkbox-item:hover {
+  background: #f1f5f9;
+}
+
+.checkbox-item input {
+  width: auto;
+  min-height: auto;
+}
+
+.checkbox-item span {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .summary-cards { grid-template-columns: repeat(2, 1fr); }
+  .report-summary-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .summary-cards { grid-template-columns: 1fr; }
+  .hub-header-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
