@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateDateFilters();
   await checkSession();
 
-  // Event Listeners
+  // Event Listeners for UI
   document.getElementById('btnShowLogin').addEventListener('click', () => {
     document.getElementById('loginModal').style.display = 'flex';
   });
@@ -28,10 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnContinue').addEventListener('click', openWorkspace);
   document.getElementById('btnLogout').addEventListener('click', logout);
   
+  // Event Listeners for Actions
   document.getElementById('loginForm').addEventListener('submit', handleLogin);
   document.getElementById('btnLoadData').addEventListener('click', loadRosterData);
   document.getElementById('btnExportExcel').addEventListener('click', exportToExcel);
   
+  // Event Listeners for Adding Students
   document.getElementById('btnAddStudent').addEventListener('click', () => {
     document.getElementById('studentModal').style.display = 'flex';
   });
@@ -50,11 +52,11 @@ async function checkSession() {
     
     if (session && session.user) {
       currentUser = session.user;
-      document.getElementById('btnContinue').style.display = 'inline-block';
+      document.getElementById('btnContinue').style.display = 'inline-flex';
       document.getElementById('btnShowLogin').style.display = 'none';
       await fetchUserProfile();
     } else {
-      document.getElementById('btnShowLogin').style.display = 'inline-block';
+      document.getElementById('btnShowLogin').style.display = 'inline-flex';
       document.getElementById('btnContinue').style.display = 'none';
     }
   } catch (err) {
@@ -104,7 +106,7 @@ async function logout() {
   document.getElementById('landingScreen').style.display = 'flex';
   document.getElementById('loginForm').reset();
   
-  document.getElementById('btnShowLogin').style.display = 'inline-block';
+  document.getElementById('btnShowLogin').style.display = 'inline-flex';
   document.getElementById('btnContinue').style.display = 'none';
   document.getElementById('btnLoginSubmit').disabled = false;
   document.getElementById('btnLoginSubmit').textContent = "Authenticate";
@@ -118,6 +120,7 @@ async function openWorkspace() {
   document.getElementById('workspaceScreen').style.display = 'block';
   document.getElementById('currentUserBadge').textContent = currentProfile ? currentProfile.name : "Admin";
   
+  // Hide the add student button if the user is not an ADMIN
   if (currentProfile && currentProfile.role !== 'ADMIN') {
     document.getElementById('btnAddStudent').style.display = 'none';
   }
@@ -146,6 +149,7 @@ function getDaysInMonth(year, month) {
 
 async function loadRosterData() {
   const btn = document.getElementById('btnLoadData');
+  const originalText = btn.textContent;
   btn.textContent = "Loading...";
   btn.disabled = true;
 
@@ -176,9 +180,9 @@ async function loadRosterData() {
     renderExcelGrid(year, month, specificDate);
   } catch (err) {
     console.error(err);
-    alert("Error loading data. Check console.");
+    alert("Error loading data. Please check console.");
   } finally {
-    btn.textContent = "Load Roster";
+    btn.textContent = originalText;
     btn.disabled = false;
   }
 }
@@ -233,18 +237,18 @@ function renderExcelGrid(year, month, specificDate) {
       let cellContent = '';
       if (status === 'Present') {
         cellContent = `<div class="attendance-controls">
-          <button class="grid-btn btn-p active" onclick="toggleAtt('${student.id}', '${date}', 'Present')">P</button>
-          <button class="grid-btn btn-a" onclick="toggleAtt('${student.id}', '${date}', 'Absent')">A</button>
+          <button type="button" class="grid-btn btn-p active" onclick="toggleAtt('${student.id}', '${date}', 'Present')">P</button>
+          <button type="button" class="grid-btn btn-a" onclick="toggleAtt('${student.id}', '${date}', 'Absent')">A</button>
         </div>`;
       } else if (status === 'Absent') {
         cellContent = `<div class="attendance-controls">
-          <button class="grid-btn btn-p" onclick="toggleAtt('${student.id}', '${date}', 'Present')">P</button>
-          <button class="grid-btn btn-a active" onclick="toggleAtt('${student.id}', '${date}', 'Absent')">A</button>
+          <button type="button" class="grid-btn btn-p" onclick="toggleAtt('${student.id}', '${date}', 'Present')">P</button>
+          <button type="button" class="grid-btn btn-a active" onclick="toggleAtt('${student.id}', '${date}', 'Absent')">A</button>
         </div>`;
       } else {
         cellContent = `<div class="attendance-controls">
-          <button class="grid-btn btn-p" onclick="toggleAtt('${student.id}', '${date}', 'Present')">P</button>
-          <button class="grid-btn btn-a" onclick="toggleAtt('${student.id}', '${date}', 'Absent')">A</button>
+          <button type="button" class="grid-btn btn-p" onclick="toggleAtt('${student.id}', '${date}', 'Present')">P</button>
+          <button type="button" class="grid-btn btn-a" onclick="toggleAtt('${student.id}', '${date}', 'Absent')">A</button>
         </div>`;
       }
       
@@ -260,22 +264,23 @@ function renderExcelGrid(year, month, specificDate) {
 // ==========================================
 // 4. DATABASE OPERATIONS
 // ==========================================
-async function toggleAtt(studentId, date, status) {
+// Attach this to the window object so inline onclick handlers can access it
+window.toggleAtt = async function(studentId, date, status) {
   try {
     const existingIndex = attendanceData.findIndex(a => a.student_id === studentId && a.attendance_date === date);
     
     if (existingIndex >= 0 && attendanceData[existingIndex].status === status) {
-      return; // Already set
+      return; // Already set, do nothing
     }
 
-    // Optimistic UI Update
+    // Optimistic UI Update (update local array immediately)
     if (existingIndex >= 0) {
       attendanceData[existingIndex].status = status;
     } else {
       attendanceData.push({ student_id: studentId, attendance_date: date, status: status });
     }
     
-    // Re-render just the grid, not a full reload
+    // Re-render the grid
     const year = document.getElementById('filterYear').value;
     const month = document.getElementById('filterMonth').value;
     const specificDate = document.getElementById('filterDate').value;
@@ -291,17 +296,20 @@ async function toggleAtt(studentId, date, status) {
     if (error) throw error;
   } catch (err) {
     console.error("Failed to mark attendance", err);
-    loadRosterData(); // Reload from DB if error occurs to fix UI
+    loadRosterData(); // Reload from DB to fix UI if it failed
   }
-}
+};
 
 async function handleAddStudent(e) {
   e.preventDefault();
   const idInput = document.getElementById('newStudentId').value.trim();
   const nameInput = document.getElementById('newStudentName').value.trim();
   const msg = document.getElementById('studentMessage');
+  const btn = e.target.querySelector('button[type="submit"]');
   
-  msg.textContent = "Saving...";
+  msg.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Saving...";
   
   try {
     const { error } = await sb.from('students').insert({
@@ -316,11 +324,13 @@ async function handleAddStudent(e) {
     
     document.getElementById('studentModal').style.display = 'none';
     document.getElementById('studentForm').reset();
-    msg.textContent = "";
-    await loadRosterData();
+    await loadRosterData(); // Refresh the grid
     
   } catch (err) {
     msg.textContent = err.message || "Failed to add student.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save Trainee";
   }
 }
 
@@ -349,10 +359,12 @@ async function exportToExcel() {
     }
   }
 
+  // Build TSV Headers
   let tsvContent = "S.No\tEmployee ID\tName\t" + datesToShow.map(d => {
     const p = d.split('-'); return `${p[2]}-${p[1]}-${p[0]}`;
   }).join('\t') + "\n";
 
+  // Build TSV Rows
   students.forEach((student, index) => {
     let row = `${index + 1}\t${student.employee_id}\t${student.name}`;
     datesToShow.forEach(date => {
@@ -368,6 +380,6 @@ async function exportToExcel() {
     btn.textContent = "Copied! Paste in Excel";
     setTimeout(() => { btn.textContent = originalText; }, 3000);
   } catch (err) {
-    alert("Copy failed. Please select the table manually.");
+    alert("Copy failed. Your browser might block clipboard access. Please manually select the table and copy.");
   }
 }

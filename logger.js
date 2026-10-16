@@ -38,8 +38,7 @@ window.addEventListener('unhandledrejection', async function(event) {
 
 async function logErrorToDB(errorData) {
   try {
-    if (typeof supabase === 'undefined') return; // Supabase not loaded yet
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    if (typeof sb === 'undefined') return; // Ensure the main script has loaded the client
     
     await sb.from('error_logs').insert([errorData]);
     console.error("🚨 [AMS LOGGER] Error successfully recorded to database for AI debugging.");
