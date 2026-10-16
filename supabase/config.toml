@@ -1,0 +1,7 @@
+# Only needed if you deploy with the Supabase CLI (SETUP.md, Step 7c, Option B).
+# If you deploy from the Supabase dashboard (Option A), you do not need this file.
+project_id = "student-attendance"
+
+[functions.admin-users]
+# ON is correct: this function is only called by logged-in users through the website.
+verify_jwt = true

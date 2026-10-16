@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AMS | Professional Attendance Management</title>
+  
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Core Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- App Configuration & Security Logger -->
+  <script src="config.js"></script>
+  <script src="logger.js"></script>
+</head>
+<body>
+
+  <!-- ==========================================
+       SCREEN 1: MODERN LANDING PAGE
+       ========================================== -->
+  <div id="landingScreen" class="screen active-screen">
+    <div class="landing-container">
+      
+      <!-- Animated Logo / Graphic -->
+      <div class="hero-graphic">
+        <div class="pulse-ring"></div>
+        <div class="logo-shield">AMS</div>
+      </div>
+
+      <div class="hero-content">
+        <h1>Attendance Management System</h1>
+        <p>Secure, enterprise-grade attendance tracking and reporting.</p>
+        
+        <!-- Dynamic Login / Continue Area -->
+        <div id="landingActions" class="action-area">
+          <div id="loadingState" class="status-badge">Checking secure session...</div>
+          
+          <button type="button" id="btnShowLogin" class="btn-primary" style="display: none;">
+            Secure Login
+          </button>
+          
+          <button type="button" id="btnContinue" class="btn-success" style="display: none;">
+            Continue to Workspace &rarr;
+          </button>
+        </div>
+      </div>
+      
+      <div class="footer-credit">Corporate Training Operations &copy; 2026 | by NKK</div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: LOGIN
+       ========================================== -->
+  <div id="loginModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <button type="button" id="btnCloseLogin" class="btn-close">&times;</button>
+      <div class="modal-header">
+        <h2>Staff Authentication</h2>
+        <p>Enter your credentials to access the roster.</p>
+      </div>
+      <form id="loginForm">
+        <div class="input-group">
+          <label for="loginId">Employee ID</label>
+          <input type="text" id="loginId" placeholder="e.g., 241536" required autocomplete="username">
+        </div>
+        <div class="input-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="btnLoginSubmit" class="btn-primary full-width">Authenticate</button>
+        <p id="loginMessage" class="error-text"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       SCREEN 2: MAIN WORKSPACE (EXCEL STYLE)
+       ========================================== -->
+  <div id="workspaceScreen" class="screen" style="display: none;">
+    
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="mini-logo">AMS</span>
+        <span class="workspace-title">Trainee Roster</span>
+      </div>
+      <div class="header-actions">
+        <div class="user-badge" id="currentUserBadge">Admin</div>
+        <button type="button" id="btnLogout" class="btn-outline">Log Out</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      
+      <!-- Toolbar & Filters -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="filter-group">
+            <label for="filterYear">Year</label>
+            <select id="filterYear"></select>
+          </div>
+          <div class="filter-group">
+            <label for="filterMonth">Month</label>
+            <select id="filterMonth">
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="filterDate">Specific Date</label>
+            <input type="date" id="filterDate">
+          </div>
+          <button type="button" id="btnLoadData" class="btn-secondary">Load Roster</button>
+        </div>
+        
+        <div class="toolbar-right">
+          <button type="button" id="btnAddStudent" class="btn-primary">+ Add Student</button>
+          <button type="button" id="btnExportExcel" class="btn-success">Copy for Excel</button>
+        </div>
+      </div>
+
+      <!-- Excel-Style Scrollable Grid -->
+      <div class="excel-container">
+        <table id="attendanceGrid" class="excel-table">
+          <thead id="gridHeader">
+            <!-- Headers injected via JS -->
+          </thead>
+          <tbody id="gridBody">
+            <!-- Rows injected via JS -->
+          </tbody>
+        </table>
+      </div>
+      
+    </main>
+  </div>
+
+  <!-- ==========================================
+       MODAL: ADD STUDENT
+       ========================================== -->
+  <div id="studentModal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <button type="button" id="btnCloseStudent" class="btn-close">&times;</button>
+      <div class="modal-header">
+        <h2>Add Trainee</h2>
+      </div>
+      <form id="studentForm">
+        <div class="input-group">
+          <label for="newStudentId">Employee ID</label>
+          <input type="text" id="newStudentId" placeholder="e.g., 250001" required>
+        </div>
+        <div class="input-group">
+          <label for="newStudentName">Full Name</label>
+          <input type="text" id="newStudentName" placeholder="Trainee Name" required>
+        </div>
+        <button type="submit" class="btn-primary full-width">Save Trainee</button>
+        <p id="studentMessage" class="error-text"></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
