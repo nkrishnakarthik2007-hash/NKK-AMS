@@ -1,0 +1,2 @@
+#mb{display:none}@media(max-width:760px){#mb{display:block}nav{display:none;position:fixed;z-index:5;top:56px;left:0;bottom:0}nav.open{display:block}main{padding:10px}}
+@media print{.no-print,nav,.top{display:none!important}}
